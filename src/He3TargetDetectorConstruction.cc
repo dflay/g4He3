@@ -46,6 +46,7 @@
 #include "G4VPhysicalVolume.hh"
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
+#include "G4UnionSolid.hh"
 #include "G4SystemOfUnits.hh"
 
 //______________________________________________________________________________
@@ -249,7 +250,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double pcR_max      = (10.8/2.)*cm;     // 4.25 inches OD  
   G4double pcR_min      = pcR_max - pcWall; // derive inner radius from wall thickness and max radius   
   G4double pcStartTheta = 0.*deg;           // polar angle (relative to z axis) 
-  G4double pcStopTheta  = 360.0*deg;        // polar angle
+  G4double pcStopTheta  = 180.0*deg;        // polar angle
   G4double pcStartPhi   = 0.*deg;           // azimuthal angle (about z axis in xy plane)    
   G4double pcStopPhi    = 360.0*deg;        // azimuthal angle
   G4double r_pc[3]      = {0.*cm,-33.02*cm,0.*cm};  // its position in the logical world 
@@ -272,7 +273,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double ewR_max      = 1.05*cm; 
   G4double ewR_min      = ewR_max-GLASS_WALL_THICKNESS; 
   G4double ewStartTheta = 0.*deg;      // polar angle (relative to z axis) 
-  G4double ewStopTheta  = 90.0*deg;   // polar angle
+  G4double ewStopTheta  = 90.0*deg;    // polar angle
   G4double ewStartPhi   = 0.*deg;      // azimuthal angle (about z axis in xy plane)    
   G4double ewStopPhi    = 360.0*deg;   // azimuthal angle
   G4double r_ewd[3]     = {0.*cm,0.*cm,(59./2.)*cm}; 
@@ -396,7 +397,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   tteStartPhi  = 0.*deg;   // probably the span angle about z   
   tteStopPhi   = 90.*deg;   
   G4double r_ttedl[3]   = {0.*cm,-5.15*cm,1.9*cm};  
-  G4double rot_ttedl[3] = {0.*deg,90.*deg,0.*deg};  
+  G4double rot_ttedl[3] = {0.*deg,270.*deg,0.*deg};  
  
   G4Torus *transTubeElDnLoShape = new G4Torus("transTubeElDnLoShape",tteR_min,tteR_max,tteRtor,tteStartPhi,tteStopPhi);
 
@@ -418,7 +419,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   tteStartPhi  = 0.*deg;   // probably the span angle about z   
   tteStopPhi   = 90.*deg;    
   G4double r_tteul[3]   = {0.*cm,-5.15*cm,-1.9*cm};  
-  G4double rot_tteul[3] = {0.*deg,270.*deg,0.*deg};  
+  G4double rot_tteul[3] = {0.*deg,90.*deg,0.*deg};  
  
   G4Torus *transTubeElUpLoShape = new G4Torus("transTubeElUpLoShape",tteR_min,tteR_max,tteRtor,tteStartPhi,tteStopPhi);
 
@@ -463,7 +464,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double TT_MAX_RADIUS  = 0.45*cm; 
   G4double TT_MIN_RADIUS  = TT_MAX_RADIUS-GLASS_WALL_THICKNESS; 
 
-  G4double TT_LONG_LENGTH = 23.8*cm; // calculated: 21.51*cm; 
+  G4double TT_LONG_LENGTH = 24.1*cm; // calculated: 21.51*cm; 
   G4double TT_VERT_LENGTH = 23.0*cm; // calculated: 22.45*cm;
 
   // shape  
@@ -595,7 +596,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // shape  
   G4double ttpR_min        = TT_MIN_RADIUS; 
   G4double ttpR_max        = TT_MAX_RADIUS;  
-  G4double ttpLength       = 2.2*cm/2.; // half length! 
+  G4double ttpLength       = 2.3*cm/2.; // half length! 
   G4double ttpStartAngle   = 0.*deg;  
   G4double ttpStopAngle    = 360.*deg;    // full circle 
   G4double r_ttpdy[3]      = {0.*cm,-2.2*cm,26.75*cm}; 
@@ -620,7 +621,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // shape  
   ttpR_min        = TT_MIN_RADIUS; 
   ttpR_max        = TT_MAX_RADIUS;  
-  ttpLength       = 2.2*cm/2.; // half length! 
+  ttpLength       = 2.3*cm/2.; // half length! 
   ttpStartAngle   = 0.*deg;  
   ttpStopAngle    = 360.*deg;    // full circle 
   G4double r_ttpuy[3]   = {0.*cm,-2.2*cm,-26.75*cm}; 
@@ -664,7 +665,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
    
   // set the color of He3 
   G4VisAttributes *He3VisAtt = new G4VisAttributes(); 
-  He3VisAtt->SetColor( G4Colour::Yellow() );
+  He3VisAtt->SetColour( G4Colour::Yellow() );
 
   logicHe3->SetVisAttributes(He3VisAtt);  
  
@@ -678,6 +679,52 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
                    false,              // no boolean operations 
                    0,                  // copy number 
                    checkOverlaps);     // check overlaps
+
+
+  // Create unions to make this a single continuous piece of material  
+  G4UnionSolid *glassCell; // this is the top level object everything becomes 
+
+  // build the target chamber + endcaps
+  // target chamber + upstream window 
+  P_ewu.setZ(-tcLength);  
+  glassCell = new G4UnionSolid("gc_tc_ewu",targetChamberShape,endWindowShapeUp,rm_ewu,P_ewu);
+  // downstream window  
+  P_ewd.setZ(tcLength);  
+  glassCell = new G4UnionSolid("gc_tc_ewud",glassCell,endWindowShapeDn,rm_ewd,P_ewd);  
+
+  // transfer tube posts
+  // upstream  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,glassCell,transTubePostUpShape,rm_ttpdy,P_ttpdy);  
+  // downstream 
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud",glassCell,transTubePostUpShape,rm_ttpuy,P_ttpuy); 
+
+  // transfer tube elbows 
+  // upstream
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eu" ,glassCell,transTubeElUpShape,rm_tteu,P_tteu);  
+  // downstream  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud",glassCell,transTubeElDnShape,rm_tted,P_tted); 
+
+  // transfer tube along z 
+  // upstream
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzu" ,glassCell,transTubeUpZShape,rm_ttuz,P_ttuz); 
+  // downstream  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud",glassCell,transTubeDnZShape,rm_ttdz,P_ttdz); 
+
+  // transfer tube elbows [lower]  
+  // upstream
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_elu" ,glassCell,transTubeElUpLoShape,rm_tteul,P_tteul);  
+  // downstream  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_elud",glassCell,transTubeElDnLoShape,rm_ttedl,P_ttedl); 
+
+  G4LogicalVolume *logicGlassCell = new G4LogicalVolume(glassCell,GE180,"logicGlassCell");
+
+  G4VisAttributes *visGC = new G4VisAttributes(); 
+  visGC->SetColour( G4Colour::Red() ); 
+
+  logicGlassCell->SetVisAttributes(visGC); 
+
+  G4ThreeVector P_tgt_o = G4ThreeVector(0,20.*cm,0); 
+  new G4PVPlacement(0,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,checkOverlaps);       
 
   // always return the physical World
   return physWorld;
