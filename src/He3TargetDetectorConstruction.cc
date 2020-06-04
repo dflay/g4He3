@@ -240,12 +240,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   // Try a different approach.  Use an assembly volume... 
   G4AssemblyVolume *targetAssembly = new G4AssemblyVolume();
-
-  // use this to set the physical location
-  G4ThreeVector P; 
-
-  // use this to rotate the geometry 
-  G4RotationMatrix *rm = new G4RotationMatrix(); 
  
   //---- pumping chamber ----
   G4double pcWall       = GLASS_WALL_THICKNESS;            
@@ -262,10 +256,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4LogicalVolume *logicPumpChamber = new G4LogicalVolume(pumpChamberShape,GE180,"logicPumpChamber"); 
 
   // set its position and rotation 
-  P.setX(r_pc[0]);        P.setY(r_pc[1]);        P.setZ(r_pc[2]); 
-  rm->rotateX(rot_pc[0]); rm->rotateY(rot_pc[1]); rm->rotateZ(rot_pc[2]);  
+  G4ThreeVector P_pc      = G4ThreeVector(r_pc[0],r_pc[1],r_pc[2]);  
+  G4RotationMatrix *rm_pc = new G4RotationMatrix();
+  rm_pc->rotateX(rot_pc[0]);  
+  rm_pc->rotateY(rot_pc[1]);  
+  rm_pc->rotateZ(rot_pc[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicPumpChamber,P,rm);  
+  targetAssembly->AddPlacedVolume(logicPumpChamber,P_pc,rm_pc);  
 
   //---- end window on target chamber, downstream ----  
   // FIXME: What is the correct material?  Using GE180 for now  
@@ -285,10 +282,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4LogicalVolume *logicEndWindowDn = new G4LogicalVolume(endWindowShapeDn,GE180,"logicEndWindowDn"); 
 
   // set its position and rotation 
-  P.setX(r_ewd[0]);        P.setY(r_ewd[1]);        P.setZ(r_ewd[2]); 
-  rm->rotateX(rot_ewd[0]); rm->rotateY(rot_ewd[1]); rm->rotateZ(rot_ewd[2]);  
+  G4ThreeVector P_ewd      = G4ThreeVector(r_ewd[0],r_ewd[1],r_ewd[2]);  
+  G4RotationMatrix *rm_ewd = new G4RotationMatrix();
+  rm_ewd->rotateX(rot_ewd[0]);  
+  rm_ewd->rotateY(rot_ewd[1]);  
+  rm_ewd->rotateZ(rot_ewd[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicEndWindowDn,P,rm);  
+  targetAssembly->AddPlacedVolume(logicEndWindowDn,P_ewd,rm_ewd);  
 
   //---- end window on target chamber, upstream ----  
   // FIXME: What is the correct material?  Using GE180 for now  
@@ -302,16 +302,19 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double rot_ewu[3] = {180.*deg,0.*deg,0.*deg}; 
 
   // shape 
-  G4Sphere *endWindowShapeUp      = new G4Sphere("endWindowShapeUp",ewR_min,ewR_max,ewStartPhi,ewStopPhi,ewStartTheta,ewStopTheta);
+  G4Sphere *endWindowShapeUp        = new G4Sphere("endWindowShapeUp",ewR_min,ewR_max,ewStartPhi,ewStopPhi,ewStartTheta,ewStopTheta);
 
   // logical volume 
   G4LogicalVolume *logicEndWindowUp = new G4LogicalVolume(endWindowShapeUp,GE180,"logicEndWindowUp"); 
 
   // set its position and rotation 
-  P.setX(r_ewu[0]);       P.setY(r_ewu[1]);       P.setZ(r_ewu[2]); 
-  rm->rotateX(rot_ewu[0]); rm->rotateY(rot_ewu[1]); rm->rotateZ(rot_ewu[2]);  
+  G4ThreeVector P_ewu      = G4ThreeVector(r_ewu[0],r_ewu[1],r_ewu[2]);  
+  G4RotationMatrix *rm_ewu = new G4RotationMatrix();
+  rm_ewu->rotateX(rot_ewu[0]);  
+  rm_ewu->rotateY(rot_ewu[1]);  
+  rm_ewu->rotateZ(rot_ewu[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicEndWindowUp,P,rm);  
+  targetAssembly->AddPlacedVolume(logicEndWindowUp,P_ewu,rm_ewu);  
 
   //---- target chamber ----
   // along z axis 
@@ -331,10 +334,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4LogicalVolume *logicTargetChamber = new G4LogicalVolume(targetChamberShape,GE180,"logicTargetChamber");  
 
   // set its position and rotation 
-  P.setX(r_tc[0]);       P.setY(r_tc[1]);       P.setZ(r_tc[2]); 
-  rm->rotateX(rot_tc[0]); rm->rotateY(rot_tc[1]); rm->rotateZ(rot_tc[2]);  
+  G4ThreeVector P_tc      = G4ThreeVector(r_tc[0],r_tc[1],r_tc[2]);  
+  G4RotationMatrix *rm_tc = new G4RotationMatrix();
+  rm_tc->rotateX(rot_tc[0]);  
+  rm_tc->rotateY(rot_tc[1]);  
+  rm_tc->rotateZ(rot_tc[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicTargetChamber,P,rm);  
+  targetAssembly->AddPlacedVolume(logicTargetChamber,P_tc,rm_tc);  
 
   //---- transfer tube elbow, downstream 
   G4double tteR_max     = 0.45*cm;                           // max radius of tube
@@ -343,20 +349,23 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double tteStartPhi  = 0.*deg;   // probably the span angle about z   
   G4double tteStopPhi   = 90.*deg;   
   G4double r_tted[3]    = {0.*cm,-3.35*cm,25.85*cm}; 
-  G4double rot_tted[3]  = {-90.*deg,90.*deg,0.*deg};  
+  G4double rot_tted[3]  = {180.*deg,-90.*deg,0.*deg};  
  
   G4Torus *transTubeElDnShape = new G4Torus("transTubeElDnShape",tteR_min,tteR_max,tteRtor,tteStartPhi,tteStopPhi);
 
   G4LogicalVolume *logicTransTubeElDn = new G4LogicalVolume(transTubeElDnShape,GE180,"logicTransTubeElDn"); 
 
   // set its position and rotation 
-  P.setX(r_tted[0]);        P.setY(r_tted[1]);        P.setZ(r_tted[2]); 
-  rm->rotateX(rot_tted[0]); rm->rotateY(rot_tted[1]); rm->rotateZ(rot_tted[2]);  
+  G4ThreeVector P_tted      = G4ThreeVector(r_tted[0],r_tted[1],r_tted[2]);  
+  G4RotationMatrix *rm_tted = new G4RotationMatrix();
+  rm_tted->rotateX(rot_tted[0]);  
+  rm_tted->rotateY(rot_tted[1]);  
+  rm_tted->rotateZ(rot_tted[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicTransTubeElDn,P,rm);  
+  targetAssembly->AddPlacedVolume(logicTransTubeElDn,P_tted,rm_tted);  
 
   //---- transfer tube elbow, upstream 
-  tteR_max     = 0.45*cm;                           // max radius of tube
+  tteR_max     = 0.45*cm;                          // max radius of tube
   tteR_min     = tteR_max - GLASS_WALL_THICKNESS;  // min radius of tube 
   tteRtor      = 0.9*cm;   // major radius of torus   
   tteStartPhi  = 0.*deg;   // probably the span angle about z   
@@ -369,10 +378,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4LogicalVolume *logicTransTubeElUp = new G4LogicalVolume(transTubeElUpShape,GE180,"logicTransTubeElUp");
 
   // set its position and rotation 
-  P.setX(r_tteu[0]);        P.setY(r_tteu[1]);        P.setZ(r_tteu[2]); 
-  rm->rotateX(rot_tteu[0]); rm->rotateY(rot_tteu[1]); rm->rotateZ(rot_tteu[2]);  
+  G4ThreeVector P_tteu      = G4ThreeVector(r_tteu[0],r_tteu[1],r_tteu[2]);  
+  G4RotationMatrix *rm_tteu = new G4RotationMatrix();
+  rm_tteu->rotateX(rot_tteu[0]);  
+  rm_tteu->rotateY(rot_tteu[1]);  
+  rm_tteu->rotateZ(rot_tteu[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicTransTubeElUp,P,rm);  
+  targetAssembly->AddPlacedVolume(logicTransTubeElUp,P_tteu,rm_tteu);  
  
   //---- transfer tube elbow, downstream lower  
   tteR_max     = 0.45*cm;                           // max radius of tube
@@ -381,17 +393,20 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   tteStartPhi  = 0.*deg;   // probably the span angle about z   
   tteStopPhi   = 90.*deg;   
   G4double r_ttedl[3]   = {0.*cm,-5.15*cm,1.9*cm};  
-  G4double rot_ttedl[3] = {90.*deg,90.*deg,0.*deg};  
+  G4double rot_ttedl[3] = {0.*deg,90.*deg,0.*deg};  
  
   G4Torus *transTubeElDnLoShape = new G4Torus("transTubeElDnLoShape",tteR_min,tteR_max,tteRtor,tteStartPhi,tteStopPhi);
 
   G4LogicalVolume *logicTransTubeElDnLo = new G4LogicalVolume(transTubeElDnLoShape,GE180,"logicTransTubeElDnLo"); 
 
   // set its position and rotation 
-  P.setX(r_ttedl[0]);        P.setY(r_ttedl[1]);        P.setZ(r_ttedl[2]); 
-  rm->rotateX(rot_ttedl[0]); rm->rotateY(rot_ttedl[1]); rm->rotateZ(rot_ttedl[2]);  
+  G4ThreeVector P_ttedl      = G4ThreeVector(r_ttedl[0],r_ttedl[1],r_ttedl[2]);  
+  G4RotationMatrix *rm_ttedl = new G4RotationMatrix();
+  rm_ttedl->rotateX(rot_ttedl[0]);  
+  rm_ttedl->rotateY(rot_ttedl[1]);  
+  rm_ttedl->rotateZ(rot_ttedl[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicTransTubeElDnLo,P,rm);  
+  targetAssembly->AddPlacedVolume(logicTransTubeElDnLo,P_ttedl,rm_ttedl);  
 
   //---- transfer tube elbow, upstream lower  
   tteR_max     = 0.45*cm;                           // max radius of tube
@@ -400,7 +415,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   tteStartPhi  = 0.*deg;   // probably the span angle about z   
   tteStopPhi   = 90.*deg;    
   G4double r_tteul[3]   = {0.*cm,-5.15*cm,-1.9*cm};  
-  G4double rot_tteul[3] = {0.*deg,90.*deg,0.*deg};  
+  G4double rot_tteul[3] = {0.*deg,270.*deg,0.*deg};  
  
   G4Torus *transTubeElUpLoShape = new G4Torus("transTubeElUpLoShape",tteR_min,tteR_max,tteRtor,tteStartPhi,tteStopPhi);
 
@@ -567,7 +582,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   rm_ttpdy->rotateY(rot_ttpdy[1]);  
   rm_ttpdy->rotateZ(rot_ttpdy[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicTransTubePostDn,P_ttdy,rm_ttpdy);  
+  targetAssembly->AddPlacedVolume(logicTransTubePostDn,P_ttpdy,rm_ttpdy);  
 
   //---- transfer tube post: upstream, along y ----  
 
