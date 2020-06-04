@@ -43,6 +43,9 @@
 #include "G4Tubs.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
+#include "G4VPhysicalVolume.hh"
+#include "G4VisAttributes.hh"
+#include "G4Colour.hh"
 #include "G4SystemOfUnits.hh"
 
 //______________________________________________________________________________
@@ -272,7 +275,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double ewStopTheta  = 90.0*deg;   // polar angle
   G4double ewStartPhi   = 0.*deg;      // azimuthal angle (about z axis in xy plane)    
   G4double ewStopPhi    = 360.0*deg;   // azimuthal angle
-  G4double r_ewd[3]     = {0.*cm,0.*cm,(61.2/2.)*cm}; 
+  G4double r_ewd[3]     = {0.*cm,0.*cm,(59./2.)*cm}; 
   G4double rot_ewd[3]   = {0.*deg,0.*deg,0.*deg}; 
 
   // shape 
@@ -298,7 +301,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   ewStopTheta  = 90.0*deg;    // polar angle
   ewStartPhi   = 0.*deg;      // azimuthal angle (about z axis in xy plane)    
   ewStopPhi    = 360.0*deg;   // azimuthal angle
-  G4double r_ewu[3]   = {0.*cm,0.*cm,(-61./2.)*cm};
+  G4double r_ewu[3]   = {0.*cm,0.*cm,(-59./2.)*cm};
   G4double rot_ewu[3] = {180.*deg,0.*deg,0.*deg}; 
 
   // shape 
@@ -460,7 +463,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double TT_MAX_RADIUS  = 0.45*cm; 
   G4double TT_MIN_RADIUS  = TT_MAX_RADIUS-GLASS_WALL_THICKNESS; 
 
-  G4double TT_LONG_LENGTH = 23.0*cm; // calculated: 21.51*cm; 
+  G4double TT_LONG_LENGTH = 23.8*cm; // calculated: 21.51*cm; 
   G4double TT_VERT_LENGTH = 23.0*cm; // calculated: 22.45*cm;
 
   // shape  
@@ -469,7 +472,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double ttuLength       = TT_LONG_LENGTH/2.; // half length! 
   G4double ttuStartAngle   = 0.*deg;  
   G4double ttuStopAngle    = 360.*deg;    // full circle 
-  G4double r_ttuz[3]       = {0.*cm,-4.25*cm,-14.19*cm}; 
+  G4double r_ttuz[3]       = {0.*cm,-4.25*cm,-13.8*cm}; 
   G4double rot_ttuz[3]     = {0.*deg,0.*deg,0.*deg}; 
 
   G4Tubs *transTubeUpZShape = new G4Tubs("transTubeUpZShape",ttuR_min,ttuR_max,ttuLength,ttuStartAngle,ttuStopAngle);
@@ -519,7 +522,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double ttdLength       = TT_LONG_LENGTH/2.; // half length! 
   G4double ttdStartAngle   = 0.*deg;  
   G4double ttdStopAngle    = 360.*deg;    // full circle
-  G4double r_ttdz[3]       = {0.*cm,-4.25*cm,14.19*cm}; 
+  G4double r_ttdz[3]       = {0.*cm,-4.25*cm,13.8*cm}; 
   G4double rot_ttdz[3]     = {0.*deg,0.*deg,0.*deg}; 
  
   G4Tubs *transTubeDnZShape = new G4Tubs("transTubeDnZShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
@@ -536,35 +539,63 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // place in the target assembly  
   targetAssembly->AddPlacedVolume(logicTransTubeDnZ,P_ttdz,rm_ttdz);  
  
-  //---- transfer tube: upstream, along y ----  
+  //---- transfer tube: downstream, along y ----  
+  // this has two components since it joins with a sphere 
+  // - short (above sphere) 
+  // - long  (below sphere)  
+
+  // long (below) 
   ttdR_min        = TT_MIN_RADIUS; 
   ttdR_max        = TT_MAX_RADIUS;  
-  ttdLength       = TT_VERT_LENGTH/2.; // half length! 
+  ttdLength       = 17.5*cm/2.; // half length! 
   ttdStartAngle   = 0.*deg;  
   ttdStopAngle    = 360.*deg;    // full circle
-  G4double r_ttdy[3]   = {0.*cm,-16.70*cm,1.0*cm}; 
-  G4double rot_ttdy[3] = {90.*deg,0.*deg,0.*deg}; 
+  G4double r_ttdby[3]   = {0.*cm,-18.7*cm,1.0*cm}; 
+  G4double rot_ttdby[3] = {90.*deg,0.*deg,0.*deg}; 
  
-  G4Tubs *transTubeDnYShape = new G4Tubs("transTubeDnYShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
+  G4Tubs *transTubeDnBYShape = new G4Tubs("transTubeDnBYShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
 
   // logical volume 
-  G4LogicalVolume *logicTransTubeDnY = new G4LogicalVolume(transTubeDnYShape,GE180,"logicTransTubeDnY"); 
+  G4LogicalVolume *logicTransTubeDnBY = new G4LogicalVolume(transTubeDnBYShape,GE180,"logicTransTubeDnBY"); 
 
   // set its position and rotation 
-  G4ThreeVector P_ttdy      = G4ThreeVector(r_ttdy[0],r_ttdy[1],r_ttdy[2]);  
-  G4RotationMatrix *rm_ttdy = new G4RotationMatrix();
-  rm_ttdy->rotateX(rot_ttdy[0]);  
-  rm_ttdy->rotateY(rot_ttdy[1]);  
-  rm_ttdy->rotateZ(rot_ttdy[2]);  
+  G4ThreeVector P_ttdby      = G4ThreeVector(r_ttdby[0],r_ttdby[1],r_ttdby[2]);  
+  G4RotationMatrix *rm_ttdby = new G4RotationMatrix();
+  rm_ttdby->rotateX(rot_ttdby[0]);  
+  rm_ttdby->rotateY(rot_ttdby[1]);  
+  rm_ttdby->rotateZ(rot_ttdby[2]);  
   // place in the target assembly  
-  targetAssembly->AddPlacedVolume(logicTransTubeDnY,P_ttdy,rm_ttdy);  
+  targetAssembly->AddPlacedVolume(logicTransTubeDnBY,P_ttdby,rm_ttdby);  
+
+  // short (above) 
+  ttdR_min        = TT_MIN_RADIUS; 
+  ttdR_max        = TT_MAX_RADIUS;  
+  ttdLength       = 1.65*cm/2.; // half length! 
+  ttdStartAngle   = 0.*deg;  
+  ttdStopAngle    = 360.*deg;    // full circle
+  G4double r_ttday[3]   = {0.*cm,-6.10*cm,1.0*cm}; 
+  G4double rot_ttday[3] = {90.*deg,0.*deg,0.*deg}; 
  
-  //---- transfer tube post: downstream, along y ----  
+  G4Tubs *transTubeDnAYShape = new G4Tubs("transTubeDnAYShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
+
+  // logical volume 
+  G4LogicalVolume *logicTransTubeDnAY = new G4LogicalVolume(transTubeDnAYShape,GE180,"logicTransTubeDnAY"); 
+
+  // set its position and rotation 
+  G4ThreeVector P_ttday      = G4ThreeVector(r_ttday[0],r_ttday[1],r_ttday[2]);  
+  G4RotationMatrix *rm_ttday = new G4RotationMatrix();
+  rm_ttday->rotateX(rot_ttday[0]);  
+  rm_ttday->rotateY(rot_ttday[1]);  
+  rm_ttday->rotateZ(rot_ttday[2]);  
+  // place in the target assembly  
+  targetAssembly->AddPlacedVolume(logicTransTubeDnAY,P_ttday,rm_ttday);  
+ 
+  //---- transfer tube post: downstream, along y ---- 
 
   // shape  
   G4double ttpR_min        = TT_MIN_RADIUS; 
   G4double ttpR_max        = TT_MAX_RADIUS;  
-  G4double ttpLength       = 2.3*cm/2.; // half length! 
+  G4double ttpLength       = 2.2*cm/2.; // half length! 
   G4double ttpStartAngle   = 0.*deg;  
   G4double ttpStopAngle    = 360.*deg;    // full circle 
   G4double r_ttpdy[3]      = {0.*cm,-2.2*cm,26.75*cm}; 
@@ -589,7 +620,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // shape  
   ttpR_min        = TT_MIN_RADIUS; 
   ttpR_max        = TT_MAX_RADIUS;  
-  ttpLength       = 2.3*cm/2.; // half length! 
+  ttpLength       = 2.2*cm/2.; // half length! 
   ttpStartAngle   = 0.*deg;  
   ttpStopAngle    = 360.*deg;    // full circle 
   G4double r_ttpuy[3]   = {0.*cm,-2.2*cm,-26.75*cm}; 
@@ -616,37 +647,38 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   targetAssembly->MakeImprint(logicWorld,PA,RA,0,checkOverlaps); 
 
   //---- polarized 3He ----
-  
-  // G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
-  // G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
-  // pol3He->AddElement(el3He, 1); 
+  G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
+  G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
+  pol3He->AddElement(el3He, 1); 
 
-  // // cylinder of polarized 3He 
-  // G4double innerRadius = 0.0*cm; 
-  // G4double outerRadius = 1.0*cm;
-  // G4double length      = (25./2.)*cm; // half length!      
-  // G4double startAngle  = 0.*deg;  
-  // G4double stopAngle   = 360.*deg;   // full circle 
-  // G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
+  // cylinder of polarized 3He 
+  G4double innerRadius = 0.0*cm; 
+  G4double outerRadius = tcR_min;     // fill the target chamber  
+  G4double length      = tcLength;    // length of target chamber       
+  G4double startAngle  = 0.*deg;  
+  G4double stopAngle   = 360.*deg;   // full circle 
+  G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
 
-  // // logical volume of He3
-  // G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
-  //   
-  // // placement of He3 -- at origin  
-  // G4double xhe = 0.*cm; 
-  // G4double yhe = 0.*cm; 
-  // G4double zhe = 0.*cm; 
-  // G4ThreeVector he3pos = G4ThreeVector(xhe,yhe,zhe); 
-  // new G4PVPlacement(0,                 // rotation
-  //                  he3pos,             // position 
-  //                  logicHe3,           // logical volume 
-  //                  "physHe3",          // name 
-  //                  logicTargetChamber, // logical mother volume  
-  //                  false,              // no boolean operations 
-  //                  0,                  // copy number 
-  //                  checkOverlaps);     // check overlaps
+  // logical volume of He3
+  G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
+   
+  // set the color of He3 
+  G4VisAttributes *He3VisAtt = new G4VisAttributes(); 
+  He3VisAtt->SetColor( G4Colour::Yellow() );
 
-  
+  logicHe3->SetVisAttributes(He3VisAtt);  
+ 
+  // placement of He3 -- at origin  
+  G4ThreeVector he3pos = G4ThreeVector(0,0,0); 
+  new G4PVPlacement(0,                 // rotation
+                   he3pos,             // position 
+                   logicHe3,           // logical volume 
+                   "physHe3",          // name 
+                   logicTargetChamber, // logical mother volume is the target chamber 
+                   false,              // no boolean operations 
+                   0,                  // copy number 
+                   checkOverlaps);     // check overlaps
+
   // always return the physical World
   return physWorld;
 }
