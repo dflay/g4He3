@@ -465,7 +465,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4double TT_MIN_RADIUS  = TT_MAX_RADIUS-GLASS_WALL_THICKNESS; 
 
   G4double TT_LONG_LENGTH = 24.1*cm; // calculated: 21.51*cm; 
-  G4double TT_VERT_LENGTH = 23.0*cm; // calculated: 22.45*cm;
+  G4double TT_VERT_LENGTH = 23.1*cm; // calculated: 22.45*cm;
 
   // shape  
   G4double ttuR_min        = TT_MIN_RADIUS; 
@@ -548,7 +548,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // long (below) 
   ttdR_min        = TT_MIN_RADIUS; 
   ttdR_max        = TT_MAX_RADIUS;  
-  ttdLength       = 17.5*cm/2.; // half length! 
+  ttdLength       = 17.6*cm/2.; // half length! 
   ttdStartAngle   = 0.*deg;  
   ttdStopAngle    = 360.*deg;    // full circle
   G4double r_ttdby[3]   = {0.*cm,-18.7*cm,1.0*cm}; 
@@ -571,7 +571,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // short (above) 
   ttdR_min        = TT_MIN_RADIUS; 
   ttdR_max        = TT_MAX_RADIUS;  
-  ttdLength       = 1.65*cm/2.; // half length! 
+  ttdLength       = 1.70*cm/2.; // half length! 
   ttdStartAngle   = 0.*deg;  
   ttdStopAngle    = 360.*deg;    // full circle
   G4double r_ttday[3]   = {0.*cm,-6.10*cm,1.0*cm}; 
@@ -704,7 +704,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // downstream  
   glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud",glassCell,transTubeElDnShape,rm_tted,P_tted); 
 
-  // transfer tube along z 
+  // transfer tubes along z 
   // upstream
   glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzu" ,glassCell,transTubeUpZShape,rm_ttuz,P_ttuz); 
   // downstream  
@@ -715,6 +715,17 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_elu" ,glassCell,transTubeElUpLoShape,rm_tteul,P_tteul);  
   // downstream  
   glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_elud",glassCell,transTubeElDnLoShape,rm_ttedl,P_ttedl); 
+
+  // transfer tubes along y 
+  // upstream
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_tyu" ,glassCell,transTubeUpYShape,rm_ttuy,P_ttuy); 
+  // downstream: above  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_tyua",glassCell,transTubeDnAYShape,rm_ttday,P_ttday); 
+  // downstream: sphere   
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_tyuas",glassCell,transTubeSphere,rm_tts,P_tts); 
+  // downstream: below  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud_eud_tzud_tyuasb",glassCell,transTubeDnBYShape,rm_ttdby,P_ttdby); 
+
 
   G4LogicalVolume *logicGlassCell = new G4LogicalVolume(glassCell,GE180,"logicGlassCell");
 
