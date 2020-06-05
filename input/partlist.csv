@@ -1,0 +1,9 @@
+#name,geometry,len_unit,ang_unit,rtor,rmin,rmax,length,startTheta,stopTheta,startPhi,stopPhi,x,y,z,rx,ry,rz
+pumpingChamber,sphere,cm,deg,0.0,5.20,5.40,0.0,0.0,180.0,0.0,360.0,0.0,-33.02,0.0,0.0,0.0,0.0
+targetChamber,tube,cm,deg,0,0.85,1.05,57.9,0.0,0.0,0.0,360.0,0,0,0,0,0,0
+endWindow_up,sphere,cm,deg,0,0.85,1.05,0.0,0.0,90.0,0.0,360.0,0,0,-28.95,180.0,0,0
+endWindow_dn,sphere,cm,deg,0,0.85,1.05,0.0,0.0,90.0,0.0,360.0,0,0,28.95,0,0,0
+transTubeEl_dn,torus,cm,deg,0.9,0.25,0.45,0.0,0.0,0.0,0.0,90.0,0.0,-3.35,25.85,180.0,-90.0,0.0
+transTubeEl_up,torus,cm,deg,0.9,0.25,0.45,0.0,0.0,0.0,0.0,90.0,0.0,-3.35,-25.85,180.0,90.0,0.0
+transTubeElLo_dn,torus,cm,deg,0.9,0.25,0.45,0.0,0.0,0.0,0.0,90.0,0.0,-5.15,1.90,0.0,270.0,0.0
+transTubeElLo_up,torus,cm,deg,0.9,0.25,0.45,0.0,0.0,0.0,0.0,90.0,0.0,-5.15,-1.90,0.0,90.0,0.0
