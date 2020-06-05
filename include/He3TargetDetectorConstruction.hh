@@ -30,8 +30,35 @@
 #ifndef He3TargetDetectorConstruction_h
 #define He3TargetDetectorConstruction_h 1
 
+#include <cstdlib>
+#include <fstream>
+#include <string>
+#include <vector> 
+
 #include "G4VUserDetectorConstruction.hh"
 #include "globals.hh"
+
+#include "He3TargetPartParameters.hh"
+
+#include "G4Transform3D.hh"
+#include "G4PhysicalConstants.hh"
+#include "G4RunManager.hh"
+#include "G4NistManager.hh"
+#include "G4AssemblyVolume.hh"
+#include "G4Box.hh"
+#include "G4Cons.hh"
+#include "G4Orb.hh"
+#include "G4Sphere.hh"
+#include "G4Torus.hh"
+#include "G4Trd.hh"
+#include "G4Tubs.hh"
+#include "G4LogicalVolume.hh"
+#include "G4PVPlacement.hh"
+#include "G4VPhysicalVolume.hh"
+#include "G4VisAttributes.hh"
+#include "G4Colour.hh"
+#include "G4UnionSolid.hh"
+#include "G4SystemOfUnits.hh"
 
 class G4VPhysicalVolume;
 class G4LogicalVolume;
@@ -50,9 +77,16 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
 
   protected:
     G4LogicalVolume*  fScoringVolume;
-};
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+  private:
+   bool fDebug;
+   std::vector<partParameters_t> fPartData; 
+
+   int ReadData(const char *inpath);
+   int SplitString(const char delim,const std::string inStr,std::vector<std::string> &out); 
+   int GetPart(const char *partName,partParameters_t &data);  
+
+};
 
 #endif
 
