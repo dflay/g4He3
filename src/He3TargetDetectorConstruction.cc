@@ -500,10 +500,10 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   glassCell = new G4UnionSolid("gc_tc_ewud",glassCell,endWindowShapeDn,rm_ewd,P_ewd);  
 
   // transfer tube posts
-  // // upstream  
-  // glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,glassCell,transTubePostUpShape,rm_ttpuy,P_ttpuy);  
-  // // downstream 
-  // glassCell = new G4UnionSolid("gc_tc_ewud_pud",glassCell,transTubePostDnShape,rm_ttpdy,P_ttpdy); 
+  // upstream  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,glassCell,transTubePostUpShape,rm_ttpuy,P_ttpuy);  
+  // downstream 
+  glassCell = new G4UnionSolid("gc_tc_ewud_pud",glassCell,transTubePostDnShape,rm_ttpdy,P_ttpdy); 
 
   // transfer tube elbows 
   // upstream
@@ -619,7 +619,7 @@ int He3TargetDetectorConstruction::GetPart(const char *partName,partParameters_t
 int He3TargetDetectorConstruction::ReadData(const char *inpath){
 
    std::string aLine;
-   std::vector<std::string> line;
+   std::vector<std::string> row;
 
    std::ifstream infile;
    infile.open(inpath);
@@ -633,15 +633,15 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       G4cout << "[He3TargetDetectorConstruction::ReadData]: Opened the file: " << inpath << G4endl;
       while( !infile.eof() ){
          std::getline(infile,aLine);
-         if(k>0) line.push_back(aLine); // skip the header line 
+         if(k>0) row.push_back(aLine); // skip the header row 
 	 k++;
       }
-      // line.pop_back();  // since we skip the first line, don't need to worry about this 
+      // row.pop_back();  // since we skip the first row, don't need to worry about this 
       infile.close();
    }
 
-   int NROW = line.size();
-   std::vector<std::string> row;
+   int NROW = row.size();
+   std::vector<std::string> col;
 
    partParameters_t dataPt; 
    double r_min=0,r_max=0,r_tor=0;
@@ -653,31 +653,31 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
    // now parse the data
    int rc=0;
    for(int i=0;i<NROW;i++){
-      // split the line into a vector.  This is a single row 
-      rc   = SplitString(',',line[i],row);
+      // split the row into a vector which represents the columns 
+      rc   = SplitString(',',row[i],col);
       if(rc!=0){
-         G4cout << "[He3TargetDetectorConstruction::ReadData]: Cannot parse string " << line[i] << G4endl;
+         G4cout << "[He3TargetDetectorConstruction::ReadData]: Cannot parse string " << row[i] << G4endl;
 	 return 1;
       }
       // fill the data vector
-      dataPt.name     = row[0];  
-      dataPt.shape    = row[1];  
-      dataPt.len_unit = row[2];  
-      dataPt.ang_unit = row[3];  
-      r_tor           = std::atof( row[4].c_str()  );  
-      r_min           = std::atof( row[5].c_str()  );  
-      r_max           = std::atof( row[6].c_str()  );  
-      length          = std::atof( row[7].c_str()  );  
-      startTheta      = std::atof( row[8].c_str()  );  
-      stopTheta       = std::atof( row[9].c_str()  );  
-      startPhi        = std::atof( row[10].c_str() );  
-      stopPhi         = std::atof( row[11].c_str() );  
-      x               = std::atof( row[12].c_str() );  
-      y               = std::atof( row[13].c_str() );  
-      z               = std::atof( row[14].c_str() );  
-      rx              = std::atof( row[15].c_str() );  
-      ry              = std::atof( row[16].c_str() );  
-      rz              = std::atof( row[17].c_str() );
+      dataPt.name     = col[0];  
+      dataPt.shape    = col[1];  
+      dataPt.len_unit = col[2];  
+      dataPt.ang_unit = col[3];  
+      r_tor           = std::atof( col[4].c_str()  );  
+      r_min           = std::atof( col[5].c_str()  );  
+      r_max           = std::atof( col[6].c_str()  );  
+      length          = std::atof( col[7].c_str()  );  
+      startTheta      = std::atof( col[8].c_str()  );  
+      stopTheta       = std::atof( col[9].c_str()  );  
+      startPhi        = std::atof( col[10].c_str() );  
+      stopPhi         = std::atof( col[11].c_str() );  
+      x               = std::atof( col[12].c_str() );  
+      y               = std::atof( col[13].c_str() );  
+      z               = std::atof( col[14].c_str() );  
+      rx              = std::atof( col[15].c_str() );  
+      ry              = std::atof( col[16].c_str() );  
+      rz              = std::atof( col[17].c_str() );
       // convert to units
       if( dataPt.len_unit.compare("mm")==0 ) LEN_UNIT = mm;
       if( dataPt.len_unit.compare("cm")==0)  LEN_UNIT = cm; 
@@ -713,7 +713,7 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
 	     << " rz: "                   << dataPt.rz << G4endl;  
       fPartData.push_back(dataPt);  
       // clean up
-      row.clear();
+      col.clear();
    }
    return 0;
 }
