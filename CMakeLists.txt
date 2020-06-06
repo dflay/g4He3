@@ -48,6 +48,7 @@ set(EXAMPLEg4He3_SCRIPTS
   run1.mac
   run2.mac
   vis.mac
+  input/partlist.csv
   )
 
 foreach(_script ${EXAMPLEg4He3_SCRIPTS})

@@ -43,8 +43,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // Get nist material manager
   G4NistManager* nist = G4NistManager::Instance();
 
-  ReadData("./input/partlist.csv");   
-   
   // Option to switch on/off checking of volumes overlaps
   //
   G4bool checkOverlaps = true;
@@ -221,7 +219,8 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   //===================================== END Materials =====================================
 
-  G4double GLASS_WALL_THICKNESS = 0.2*cm;
+  // load all part parameters 
+  ReadData("./input/He3-parts.csv");   
  
   //---- pumping chamber ----
 
@@ -291,22 +290,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   rm_ewu->rotateZ(ewUp.rz); 
 
   //---- transfer tube elbow, downstream 
-  // G4double tteR_max     = 0.45*cm;                           // max radius of tube
-  // G4double tteR_min     = tteR_max - GLASS_WALL_THICKNESS;  // min radius of tube 
-  // G4double tteRtor      = 0.9*cm;   // major radius of torus   
-  // G4double tteStartPhi  = 0.*deg;   // probably the span angle about z   
-  // G4double tteStopPhi   = 90.*deg;   
-  // G4double r_tted[3]    = {0.*cm,-3.35*cm,25.85*cm}; 
-  // G4double rot_tted[3]  = {180.*deg,-90.*deg,0.*deg};  
- 
-  // G4Torus *transTubeElDnShape = new G4Torus("transTubeElDnShape",tteR_min,tteR_max,tteRtor,tteStartPhi,tteStopPhi);
-
-  // // set its position and rotation 
-  // G4ThreeVector P_tted      = G4ThreeVector(r_tted[0],r_tted[1],r_tted[2]);  
-  // G4RotationMatrix *rm_tted = new G4RotationMatrix();
-  // rm_tted->rotateX(rot_tted[0]);  
-  // rm_tted->rotateY(rot_tted[1]);  
-  // rm_tted->rotateZ(rot_tted[2]);  
 
   partParameters_t tted; 
   GetPart("transTubeEl_dn",tted); 
@@ -364,90 +347,64 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   rm_tteul->rotateZ(tteul.rz); 
 
   //---- transfer tube sphere --- 
-  G4double ttsR_max      = 1.39*cm; 
-  G4double ttsR_min      = ttsR_max - GLASS_WALL_THICKNESS; 
-  G4double ttsStartTheta = 0.*deg;      // polar angle (relative to z axis) 
-  G4double ttsStopTheta  = 180.0*deg;   // polar angle
-  G4double ttsStartPhi   = 0.*deg;      // azimuthal angle (about z axis in xy plane)    
-  G4double ttsStopPhi    = 360.0*deg;   // azimuthal angle
-  G4double r_tts[3]      = {0.*cm,-8.33*cm,1.0*cm};  
-  G4double rot_tts[3]    = {0.*deg,0.*deg,0.*deg};  
+  partParameters_t tts; 
+  GetPart("transTubeSphere",tts);
 
-  // shape 
-  G4Sphere *transTubeSphere       = new G4Sphere("transTubeSphere",ttsR_min,ttsR_max,ttsStartPhi,ttsStopPhi,ttsStartTheta,ttsStopTheta);
+  G4Sphere *transTubeSphere = new G4Sphere(tts.name,
+                                           tts.r_min     ,tts.r_max,
+                                           tts.startPhi  ,tts.stopPhi,
+                                           tts.startTheta,tts.stopTheta); 
 
-  // set its position and rotation 
-  G4ThreeVector P_tts      = G4ThreeVector(r_tts[0],r_tts[1],r_tts[2]);  
+  G4ThreeVector P_tts = G4ThreeVector(tts.x,tts.y,tts.z); 
   G4RotationMatrix *rm_tts = new G4RotationMatrix();
-  rm_tts->rotateX(rot_tts[0]);  
-  rm_tts->rotateY(rot_tts[1]);  
-  rm_tts->rotateZ(rot_tts[2]);  
+  rm_tts->rotateX(tts.rx); 
+  rm_tts->rotateY(tts.ry); 
+  rm_tts->rotateZ(tts.rz); 
 
   //---- transfer tube: upstream, along z ---
+  partParameters_t ttuz; 
+  GetPart("transTubeZ_up",ttuz);
 
-  G4double TT_MAX_RADIUS  = 0.45*cm; 
-  G4double TT_MIN_RADIUS  = TT_MAX_RADIUS-GLASS_WALL_THICKNESS; 
+  G4Tubs *transTubeUpZShape = new G4Tubs(ttuz.name,
+                                         ttuz.r_min    ,ttuz.r_max,
+                                         ttuz.length/2.,
+                                         ttuz.startPhi ,ttuz.stopPhi); 
 
-  G4double TT_LONG_LENGTH = 24.1*cm; // calculated: 21.51*cm; 
-  G4double TT_VERT_LENGTH = 22.05*cm; // calculated: 22.05*cm;
-
-  // shape  
-  G4double ttuR_min        = TT_MIN_RADIUS; 
-  G4double ttuR_max        = TT_MAX_RADIUS;            
-  G4double ttuLength       = TT_LONG_LENGTH/2.; // half length! 
-  G4double ttuStartAngle   = 0.*deg;  
-  G4double ttuStopAngle    = 360.*deg;    // full circle 
-  G4double r_ttuz[3]       = {0.*cm,-4.25*cm,-13.8*cm}; 
-  G4double rot_ttuz[3]     = {0.*deg,0.*deg,0.*deg}; 
-
-  G4Tubs *transTubeUpZShape = new G4Tubs("transTubeUpZShape",ttuR_min,ttuR_max,ttuLength,ttuStartAngle,ttuStopAngle);
-
-  // set its position and rotation 
-  G4ThreeVector P_ttuz      = G4ThreeVector(r_ttuz[0],r_ttuz[1],r_ttuz[2]);  
+  G4ThreeVector P_ttuz = G4ThreeVector(ttuz.x,ttuz.y,ttuz.z); 
   G4RotationMatrix *rm_ttuz = new G4RotationMatrix();
-  rm_ttuz->rotateX(rot_ttuz[0]);  
-  rm_ttuz->rotateY(rot_ttuz[1]);  
-  rm_ttuz->rotateZ(rot_ttuz[2]);  
+  rm_ttuz->rotateX(ttuz.rx); 
+  rm_ttuz->rotateY(ttuz.ry); 
+  rm_ttuz->rotateZ(ttuz.rz); 
 
   //---- transfer tube: upstream, along y ----  
+  partParameters_t ttuy; 
+  GetPart("transTubeY_up",ttuy);
 
-  // shape  
-  ttuR_min        = TT_MIN_RADIUS; 
-  ttuR_max        = TT_MAX_RADIUS;  
-  ttuLength       = TT_VERT_LENGTH/2.; // half length! 
-  ttuStartAngle   = 0.*deg;  
-  ttuStopAngle    = 360.*deg;    // full circle
-  G4double r_ttuy[3]   = {0.*cm,-16.3*cm,-1.0*cm}; 
-  G4double rot_ttuy[3] = {90.*deg,0.*deg,0.*deg}; 
- 
-  G4Tubs *transTubeUpYShape = new G4Tubs("transTubeUpYShape",ttuR_min,ttuR_max,ttuLength,ttuStartAngle,ttuStopAngle);
+  G4Tubs *transTubeUpYShape = new G4Tubs(ttuy.name,
+                                         ttuy.r_min    ,ttuy.r_max,
+                                         ttuy.length/2.,
+                                         ttuy.startPhi ,ttuy.stopPhi); 
 
-  // set its position and rotation 
-  G4ThreeVector P_ttuy      = G4ThreeVector(r_ttuy[0],r_ttuy[1],r_ttuy[2]);  
+  G4ThreeVector P_ttuy = G4ThreeVector(ttuy.x,ttuy.y,ttuy.z); 
   G4RotationMatrix *rm_ttuy = new G4RotationMatrix();
-  rm_ttuy->rotateX(rot_ttuy[0]);  
-  rm_ttuy->rotateY(rot_ttuy[1]);  
-  rm_ttuy->rotateZ(rot_ttuy[2]);  
+  rm_ttuy->rotateX(ttuy.rx); 
+  rm_ttuy->rotateY(ttuy.ry); 
+  rm_ttuy->rotateZ(ttuy.rz); 
  
   //---- transfer tube: downstream, along z ---
+  partParameters_t ttdz; 
+  GetPart("transTubeZ_dn",ttdz);
 
-  // shape  
-  G4double ttdR_min        = TT_MIN_RADIUS;  
-  G4double ttdR_max        = TT_MAX_RADIUS; 
-  G4double ttdLength       = TT_LONG_LENGTH/2.; // half length! 
-  G4double ttdStartAngle   = 0.*deg;  
-  G4double ttdStopAngle    = 360.*deg;    // full circle
-  G4double r_ttdz[3]       = {0.*cm,-4.25*cm,13.8*cm}; 
-  G4double rot_ttdz[3]     = {0.*deg,0.*deg,0.*deg}; 
- 
-  G4Tubs *transTubeDnZShape = new G4Tubs("transTubeDnZShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
+  G4Tubs *transTubeDnZShape = new G4Tubs(ttdz.name,
+                                         ttdz.r_min    ,ttdz.r_max,
+                                         ttdz.length/2.,
+                                         ttdz.startPhi ,ttdz.stopPhi); 
 
-  // set its position and rotation 
-  G4ThreeVector P_ttdz      = G4ThreeVector(r_ttdz[0],r_ttdz[1],r_ttdz[2]);  
+  G4ThreeVector P_ttdz = G4ThreeVector(ttdz.x,ttdz.y,ttdz.z); 
   G4RotationMatrix *rm_ttdz = new G4RotationMatrix();
-  rm_ttdz->rotateX(rot_ttdz[0]);  
-  rm_ttdz->rotateY(rot_ttdz[1]);  
-  rm_ttdz->rotateZ(rot_ttdz[2]);  
+  rm_ttdz->rotateX(ttdz.rx); 
+  rm_ttdz->rotateY(ttdz.ry); 
+  rm_ttdz->rotateZ(ttdz.rz); 
  
   //---- transfer tube: downstream, along y ----  
   // this has two components since it joins with a sphere 
@@ -455,80 +412,83 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // - long  (below sphere)  
 
   // long (below) 
-  ttdR_min        = TT_MIN_RADIUS; 
-  ttdR_max        = TT_MAX_RADIUS;  
-  ttdLength       = 19.26*cm/2.; // half length! 
-  ttdStartAngle   = 0.*deg;  
-  ttdStopAngle    = 360.*deg;    // full circle
-  G4double r_ttdby[3]   = {0.*cm,-16.92*cm,1.0*cm}; 
-  G4double rot_ttdby[3] = {90.*deg,0.*deg,0.*deg}; 
- 
-  G4Tubs *transTubeDnBYShape = new G4Tubs("transTubeDnBYShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
+  partParameters_t ttdby; 
+  GetPart("transTubeYB_dn",ttdby);
 
-  // set its position and rotation 
-  G4ThreeVector P_ttdby      = G4ThreeVector(r_ttdby[0],r_ttdby[1],r_ttdby[2]);  
+  G4Tubs *transTubeDnBYShape = new G4Tubs(ttdby.name,
+                                          ttdby.r_min    ,ttdby.r_max,
+                                          ttdby.length/2.,
+                                          ttdby.startPhi ,ttdby.stopPhi); 
+
+  G4ThreeVector P_ttdby = G4ThreeVector(ttdby.x,ttdby.y,ttdby.z); 
   G4RotationMatrix *rm_ttdby = new G4RotationMatrix();
-  rm_ttdby->rotateX(rot_ttdby[0]);  
-  rm_ttdby->rotateY(rot_ttdby[1]);  
-  rm_ttdby->rotateZ(rot_ttdby[2]);  
+  rm_ttdby->rotateX(ttdby.rx); 
+  rm_ttdby->rotateY(ttdby.ry); 
+  rm_ttdby->rotateZ(ttdby.rz); 
 
   // short (above) 
-  ttdR_min        = TT_MIN_RADIUS; 
-  ttdR_max        = TT_MAX_RADIUS;  
-  ttdLength       = 2.0*cm/2.; // half length! 
-  ttdStartAngle   = 0.*deg;  
-  ttdStopAngle    = 360.*deg;    // full circle
-  G4double r_ttday[3]   = {0.*cm,-6.10*cm,1.0*cm}; 
-  G4double rot_ttday[3] = {90.*deg,0.*deg,0.*deg}; 
- 
-  G4Tubs *transTubeDnAYShape = new G4Tubs("transTubeDnAYShape",ttdR_min,ttdR_max,ttdLength,ttdStartAngle,ttdStopAngle);
+  partParameters_t ttday; 
+  GetPart("transTubeYA_dn",ttday);
 
-  // set its position and rotation 
-  G4ThreeVector P_ttday      = G4ThreeVector(r_ttday[0],r_ttday[1],r_ttday[2]);  
+  G4Tubs *transTubeDnAYShape = new G4Tubs(ttday.name,
+                                          ttday.r_min    ,ttday.r_max,
+                                          ttday.length/2.,
+                                          ttday.startPhi ,ttday.stopPhi); 
+
+  G4ThreeVector P_ttday = G4ThreeVector(ttday.x,ttday.y,ttday.z); 
   G4RotationMatrix *rm_ttday = new G4RotationMatrix();
-  rm_ttday->rotateX(rot_ttday[0]);  
-  rm_ttday->rotateY(rot_ttday[1]);  
-  rm_ttday->rotateZ(rot_ttday[2]);  
+  rm_ttday->rotateX(ttday.rx); 
+  rm_ttday->rotateY(ttday.ry); 
+  rm_ttday->rotateZ(ttday.rz); 
  
   //---- transfer tube post: downstream, along y ---- 
 
   // shape  
-  G4double ttpR_min        = TT_MIN_RADIUS; 
-  G4double ttpR_max        = TT_MAX_RADIUS;  
-  G4double ttpLength       = 2.3*cm/2.; // half length! 
-  G4double ttpStartAngle   = 0.*deg;  
-  G4double ttpStopAngle    = 360.*deg;    // full circle 
-  G4double r_ttpdy[3]      = {0.*cm,-2.2*cm,26.75*cm}; 
-  G4double rot_ttpdy[3]    = {90.*deg,0.*deg,0.*deg}; 
+  // G4double ttpR_min        = TT_MIN_RADIUS; 
+  // G4double ttpR_max        = TT_MAX_RADIUS;  
+  // G4double ttpLength       = 2.3*cm/2.; // half length! 
+  // G4double ttpStartAngle   = 0.*deg;  
+  // G4double ttpStopAngle    = 360.*deg;    // full circle 
+  // G4double r_ttpdy[3]      = {0.*cm,-2.2*cm,26.75*cm}; 
+  // G4double rot_ttpdy[3]    = {90.*deg,0.*deg,0.*deg}; 
 
-  G4Tubs *transTubePostDnShape = new G4Tubs("transTubePostDnShape",ttpR_min,ttuR_max,ttpLength,ttpStartAngle,ttpStopAngle);
+  // G4Tubs *transTubePostDnShape = new G4Tubs("transTubePostDnShape",ttpR_min,ttuR_max,ttpLength,ttpStartAngle,ttpStopAngle);
 
-  // set its position and rotation 
-  G4ThreeVector P_ttpdy      = G4ThreeVector(r_ttpdy[0],r_ttpdy[1],r_ttpdy[2]);  
+  // // set its position and rotation 
+  // G4ThreeVector P_ttpdy      = G4ThreeVector(r_ttpdy[0],r_ttpdy[1],r_ttpdy[2]);  
+  // G4RotationMatrix *rm_ttpdy = new G4RotationMatrix();
+  // rm_ttpdy->rotateX(rot_ttpdy[0]);  
+  // rm_ttpdy->rotateY(rot_ttpdy[1]);  
+  // rm_ttpdy->rotateZ(rot_ttpdy[2]);  
+
+  partParameters_t ttpdy; 
+  GetPart("transTubePost_dn",ttpdy);
+
+  G4Tubs *transTubePostDnShape = new G4Tubs(ttpdy.name,
+                                            ttpdy.r_min    ,ttpdy.r_max,
+                                            ttpdy.length/2.,
+                                            ttpdy.startPhi ,ttpdy.stopPhi); 
+
+  G4ThreeVector P_ttpdy = G4ThreeVector(ttpdy.x,ttpdy.y,ttpdy.z); 
   G4RotationMatrix *rm_ttpdy = new G4RotationMatrix();
-  rm_ttpdy->rotateX(rot_ttpdy[0]);  
-  rm_ttpdy->rotateY(rot_ttpdy[1]);  
-  rm_ttpdy->rotateZ(rot_ttpdy[2]);  
+  rm_ttpdy->rotateX(ttpdy.rx); 
+  rm_ttpdy->rotateY(ttpdy.ry); 
+  rm_ttpdy->rotateZ(ttpdy.rz); 
 
   //---- transfer tube post: upstream, along y ----  
+  partParameters_t ttpuy; 
+  GetPart("transTubePost_up",ttpuy);
 
-  // shape  
-  ttpR_min        = TT_MIN_RADIUS; 
-  ttpR_max        = TT_MAX_RADIUS;  
-  ttpLength       = 2.3*cm/2.; // half length! 
-  ttpStartAngle   = 0.*deg;  
-  ttpStopAngle    = 360.*deg;    // full circle 
-  G4double r_ttpuy[3]   = {0.*cm,-2.2*cm,-26.75*cm}; 
-  G4double rot_ttpuy[3] = {90.*deg,0.*deg,0.*deg}; 
+  G4Tubs *transTubePostUpShape = new G4Tubs(ttpuy.name,
+                                            ttpuy.r_min    ,ttpuy.r_max,
+                                            ttpuy.length/2.,
+                                            ttpuy.startPhi ,ttpuy.stopPhi); 
 
-  G4Tubs *transTubePostUpShape = new G4Tubs("transTubePostUpShape",ttpR_min,ttuR_max,ttpLength,ttpStartAngle,ttpStopAngle);
-
-  // set its position and rotation 
-  G4ThreeVector P_ttpuy      = G4ThreeVector(r_ttpuy[0],r_ttpuy[1],r_ttpuy[2]);  
+  G4ThreeVector P_ttpuy = G4ThreeVector(ttpuy.x,ttpuy.y,ttpuy.z); 
   G4RotationMatrix *rm_ttpuy = new G4RotationMatrix();
-  rm_ttpuy->rotateX(rot_ttpuy[0]);  
-  rm_ttpuy->rotateY(rot_ttpuy[1]);  
-  rm_ttpuy->rotateZ(rot_ttpuy[2]);  
+  rm_ttpuy->rotateX(ttpuy.rx); 
+  rm_ttpuy->rotateY(ttpuy.ry); 
+  rm_ttpuy->rotateZ(ttpuy.rz); 
 
   // Create unions to make this a single continuous piece of material  
   G4UnionSolid *glassCell; // this is the top level object everything becomes 
@@ -540,10 +500,10 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   glassCell = new G4UnionSolid("gc_tc_ewud",glassCell,endWindowShapeDn,rm_ewd,P_ewd);  
 
   // transfer tube posts
-  // upstream  
-  glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,glassCell,transTubePostUpShape,rm_ttpuy,P_ttpuy);  
-  // downstream 
-  glassCell = new G4UnionSolid("gc_tc_ewud_pud",glassCell,transTubePostDnShape,rm_ttpdy,P_ttpdy); 
+  // // upstream  
+  // glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,glassCell,transTubePostUpShape,rm_ttpuy,P_ttpuy);  
+  // // downstream 
+  // glassCell = new G4UnionSolid("gc_tc_ewud_pud",glassCell,transTubePostDnShape,rm_ttpdy,P_ttpdy); 
 
   // transfer tube elbows 
   // upstream
@@ -587,47 +547,71 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   new G4PVPlacement(0,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,checkOverlaps);       
 
   //---- polarized 3He ----
-  G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
-  G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
-  pol3He->AddElement(el3He, 1); 
+  // G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
+  // G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
+  // pol3He->AddElement(el3He, 1); 
 
-  // cylinder of polarized 3He 
-  G4double innerRadius = 0.0*cm; 
-  G4double outerRadius = tgtCh.r_min;     // fill the target chamber  
-  G4double length      = tgtCh.length/2.; // half-length of target chamber       
-  G4double startAngle  = 0.*deg;  
-  G4double stopAngle   = 360.*deg;   // full circle 
-  G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
+  // // cylinder of polarized 3He 
+  // G4double innerRadius = 0.0*cm; 
+  // G4double outerRadius = tgtCh.r_min;     // fill the target chamber  
+  // G4double length      = tgtCh.length/2.; // half-length of target chamber       
+  // G4double startAngle  = 0.*deg;  
+  // G4double stopAngle   = 360.*deg;   // full circle 
+  // G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
 
-  // logical volume of He3
-  G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
-   
-  // set the color of He3 
-  G4VisAttributes *He3VisAtt = new G4VisAttributes(); 
-  He3VisAtt->SetColour( G4Colour::Yellow() );
+  // // logical volume of He3
+  // G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
+  //  
+  // // set the color of He3 
+  // G4VisAttributes *He3VisAtt = new G4VisAttributes(); 
+  // He3VisAtt->SetColour( G4Colour::Yellow() );
 
-  logicHe3->SetVisAttributes(He3VisAtt);  
+  // logicHe3->SetVisAttributes(He3VisAtt);  
  
-  // placement of He3 -- at origin  
-  G4ThreeVector he3pos = G4ThreeVector(0,0,0); 
-  new G4PVPlacement(0,                 // rotation
-                   he3pos,             // position 
-                   logicHe3,           // logical volume 
-                   "physHe3",          // name 
-                   logicGlassCell,     // logical mother volume is the target chamber 
-                   false,              // no boolean operations 
-                   0,                  // copy number 
-                   checkOverlaps);     // check overlaps
+  // // placement of He3 -- at origin  
+  // G4ThreeVector he3pos = G4ThreeVector(0,0,0); 
+  // new G4PVPlacement(0,                 // rotation
+  //                  he3pos,             // position 
+  //                  logicHe3,           // logical volume 
+  //                  "physHe3",          // name 
+  //                  logicGlassCell,     // logical mother volume is the target chamber 
+  //                  false,              // no boolean operations 
+  //                  0,                  // copy number 
+  //                  checkOverlaps);     // check overlaps
 
   // always return the physical World
   return physWorld;
 }
 //______________________________________________________________________________
 int He3TargetDetectorConstruction::GetPart(const char *partName,partParameters_t &data){
-   // get the part data based on name 
+   // get the part data based on name
+   bool found=false; 
    const int N = fPartData.size();
    for(int i=0;i<N;i++){
-      if( fPartData[i].name.compare(partName)==0 ) data = fPartData[i]; 
+      if( fPartData[i].name.compare(partName)==0 ){
+	 data = fPartData[i];
+	 found = true;
+      } 
+   }
+
+   if(found && fDebug){
+      std::cout << "[He3TargetDetectorConstruction::GetPart]: FOUND part: " << std::endl;
+      std::cout << " name: " << data.name << " shape: " << data.shape << std::endl;
+      std::cout << " len unit: " << data.len_unit << " ang unit: " << data.ang_unit << std::endl;
+      std::cout << " major radius (torus): " << data.r_tor << std::endl;
+      std::cout << " min radius: " << data.r_min << " max radius: " << data.r_max << std::endl; 
+      std::cout << " length: " << data.length << std::endl; 
+      std::cout << " THETA start theta: " << data.startTheta << " stop theta: " << data.stopTheta << std::endl; 
+      std::cout << " PHI start phi: " << data.startPhi   << " stop phi: "   << data.stopPhi << std::endl; 
+      std::cout << " POS x: " << data.x << " y: " << data.y << " z: " << data.z << std::endl; 
+      std::cout << " ROT rx: " << data.rx << " ry: " << data.ry << " rz: " << data.rz << std::endl; 
+      std::cout << "------------------------------------------------------" << std::endl; 
+   }
+
+   if(!found){
+      std::cout << "[He3TargetDetectorConstruction::GetPart]: ERROR! Cannot find part " 
+                << partName << std::endl;
+      exit(1);
    }
    return 0; 
 }
@@ -652,7 +636,7 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
          if(k>0) line.push_back(aLine); // skip the header line 
 	 k++;
       }
-      line.pop_back();
+      // line.pop_back();  // since we skip the first line, don't need to worry about this 
       infile.close();
    }
 
@@ -716,12 +700,17 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       dataPt.rx         = DEG_UNIT*rx;  
       dataPt.ry         = DEG_UNIT*ry;  
       dataPt.rz         = DEG_UNIT*rz;
-      if(fDebug){
-	 G4cout << dataPt.name   << " " << dataPt.shape << " " << dataPt.r_tor << " " 
-	    << dataPt.r_min << " " << dataPt.r_max << " "  << dataPt.length << " " 
-	    << dataPt.startTheta << " " << dataPt.stopTheta << " " << dataPt.startPhi << " " << dataPt.stopPhi << " " 
-	    << dataPt.x << " " << dataPt.y << " " << dataPt.z << " " << dataPt.rx << " " << dataPt.ry << " " << dataPt.rz << G4endl;  
-      }
+      if(i==0) G4cout << "Loading 3He target part parameters: " << G4endl;
+      G4cout << "name: "                  << dataPt.name       << " shape: "      << dataPt.shape 
+	     << " major radius (torus): " << dataPt.r_tor 
+	     << " min radius: "           << dataPt.r_min      << " max radius: " << dataPt.r_max 
+	     << " length: "               << dataPt.length 
+	     << " start theta: "          << dataPt.startTheta << " stop theta: " << dataPt.stopTheta 
+	     << " start phi: "            << dataPt.startPhi   << " stop phi: "   << dataPt.stopPhi 
+	     << " x: "                    << dataPt.x          << " y: "          << dataPt.y 
+	     << " z: "                    << dataPt.z 
+	     << " rx: "                   << dataPt.rx         << " ry: " << dataPt.ry 
+	     << " rz: "                   << dataPt.rz << G4endl;  
       fPartData.push_back(dataPt);  
       // clean up
       row.clear();
