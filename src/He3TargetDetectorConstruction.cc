@@ -36,7 +36,9 @@ He3TargetDetectorConstruction::He3TargetDetectorConstruction()
 { }
 //______________________________________________________________________________
 He3TargetDetectorConstruction::~He3TargetDetectorConstruction()
-{ }
+{ 
+   fPartData.clear(); 
+}
 //______________________________________________________________________________
 G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 {  
@@ -442,25 +444,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   rm_ttday->rotateZ(ttday.rz); 
  
   //---- transfer tube post: downstream, along y ---- 
-
-  // shape  
-  // G4double ttpR_min        = TT_MIN_RADIUS; 
-  // G4double ttpR_max        = TT_MAX_RADIUS;  
-  // G4double ttpLength       = 2.3*cm/2.; // half length! 
-  // G4double ttpStartAngle   = 0.*deg;  
-  // G4double ttpStopAngle    = 360.*deg;    // full circle 
-  // G4double r_ttpdy[3]      = {0.*cm,-2.2*cm,26.75*cm}; 
-  // G4double rot_ttpdy[3]    = {90.*deg,0.*deg,0.*deg}; 
-
-  // G4Tubs *transTubePostDnShape = new G4Tubs("transTubePostDnShape",ttpR_min,ttuR_max,ttpLength,ttpStartAngle,ttpStopAngle);
-
-  // // set its position and rotation 
-  // G4ThreeVector P_ttpdy      = G4ThreeVector(r_ttpdy[0],r_ttpdy[1],r_ttpdy[2]);  
-  // G4RotationMatrix *rm_ttpdy = new G4RotationMatrix();
-  // rm_ttpdy->rotateX(rot_ttpdy[0]);  
-  // rm_ttpdy->rotateY(rot_ttpdy[1]);  
-  // rm_ttpdy->rotateZ(rot_ttpdy[2]);  
-
   partParameters_t ttpdy; 
   GetPart("transTubePost_dn",ttpdy);
 
@@ -539,7 +522,8 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4LogicalVolume *logicGlassCell = new G4LogicalVolume(glassCell,GE180,"logicGlassCell");
 
   G4VisAttributes *visGC = new G4VisAttributes(); 
-  visGC->SetColour( G4Colour::White() ); 
+  visGC->SetColour( G4Colour::White() );
+  visGC-.SetForceWireFrame(true);  
 
   logicGlassCell->SetVisAttributes(visGC); 
 
