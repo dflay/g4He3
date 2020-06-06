@@ -523,45 +523,46 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4VisAttributes *visGC = new G4VisAttributes(); 
   visGC->SetColour( G4Colour::White() );
-  visGC-.SetForceWireFrame(true);  
-
+  visGC->SetForceWireframe(true);  
   logicGlassCell->SetVisAttributes(visGC); 
 
-  G4ThreeVector P_tgt_o = G4ThreeVector(0,20.*cm,0); 
+  // place the volume. note that this is relative to the *target chamber* as that is the first object in the union 
+  G4ThreeVector P_tgt_o = G4ThreeVector(0.*cm,0.*cm,0.*cm);    
   new G4PVPlacement(0,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,checkOverlaps);       
 
   //---- polarized 3He ----
-  // G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
-  // G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
-  // pol3He->AddElement(el3He, 1); 
+  // TODO: Add "end windows" of 3He 
+  G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
+  G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
+  pol3He->AddElement(el3He, 1); 
 
-  // // cylinder of polarized 3He 
-  // G4double innerRadius = 0.0*cm; 
-  // G4double outerRadius = tgtCh.r_min;     // fill the target chamber  
-  // G4double length      = tgtCh.length/2.; // half-length of target chamber       
-  // G4double startAngle  = 0.*deg;  
-  // G4double stopAngle   = 360.*deg;   // full circle 
-  // G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
+  // cylinder of polarized 3He 
+  G4double innerRadius = 0.0*cm; 
+  G4double outerRadius = tgtCh.r_min;     // fill the target chamber  
+  G4double length      = tgtCh.length/2.; // half-length of target chamber       
+  G4double startAngle  = 0.*deg;  
+  G4double stopAngle   = 360.*deg;   // full circle 
+  G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
 
-  // // logical volume of He3
-  // G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
-  //  
-  // // set the color of He3 
-  // G4VisAttributes *He3VisAtt = new G4VisAttributes(); 
-  // He3VisAtt->SetColour( G4Colour::Yellow() );
-
-  // logicHe3->SetVisAttributes(He3VisAtt);  
+  // logical volume of He3
+  G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
+   
+  // set the color of He3 
+  G4VisAttributes *visHe3 = new G4VisAttributes(); 
+  visHe3->SetColour( G4Colour::Yellow() );
+  visHe3->SetForceWireframe(true);  
+  logicHe3->SetVisAttributes(visHe3);  
  
-  // // placement of He3 -- at origin  
-  // G4ThreeVector he3pos = G4ThreeVector(0,0,0); 
-  // new G4PVPlacement(0,                 // rotation
-  //                  he3pos,             // position 
-  //                  logicHe3,           // logical volume 
-  //                  "physHe3",          // name 
-  //                  logicGlassCell,     // logical mother volume is the target chamber 
-  //                  false,              // no boolean operations 
-  //                  0,                  // copy number 
-  //                  checkOverlaps);     // check overlaps
+  // placement of He3 is *inside target chamber*  
+  G4ThreeVector posHe3 = P_tgt_o; 
+  new G4PVPlacement(0,                 // rotation
+                   posHe3,             // position 
+                   logicHe3,           // logical volume 
+                   "physHe3",          // name 
+                   logicGlassCell,     // logical mother volume is the target chamber 
+                   false,              // no boolean operations 
+                   0,                  // copy number 
+                   checkOverlaps);     // check overlaps
 
   // always return the physical World
   return physWorld;
