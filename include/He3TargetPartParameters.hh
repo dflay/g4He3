@@ -13,9 +13,9 @@ typedef struct partParameters {
    double r_max;         // maximum radius (tube, sphere, torus)     
    double length;        // full length of object (tube only)  
    double startTheta;    // extruding polar angle (about y)  
-   double stopTheta; 
+   double dTheta;        // polar angle step size 
    double startPhi;      // extruding azimuthal angle (about z)  
-   double stopPhi;
+   double dPhi;          // azimuthal angle step size
    double x;             // x position relative to mother volume 
    double y;             // y position relative to mother volume  
    double z;             // z position relative to mother volume  
@@ -26,7 +26,7 @@ typedef struct partParameters {
    // constructor 
    partParameters(): 
       name("none"),shape("none"),len_unit("none"),ang_unit("none"),
-      r_tor(0),r_min(0),r_max(0),length(0),startTheta(0),stopTheta(0),startPhi(0),stopPhi(0),
+      r_tor(0),r_min(0),r_max(0),length(0),startTheta(0),dTheta(0),startPhi(0),dPhi(0),
       x(0),y(0),z(0),rx(0),ry(0),rz(0)
    { }
  

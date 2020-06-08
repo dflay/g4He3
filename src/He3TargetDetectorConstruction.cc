@@ -180,6 +180,12 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Element *elCa = nist->FindOrBuildElement("Ca");
   G4Element *elSr = nist->FindOrBuildElement("Sr");
   G4Element *elBa = nist->FindOrBuildElement("Ba");
+  G4Element *elCu = nist->FindOrBuildElement("Cu");
+
+  // Cu
+  G4double cuRho = 8.96*g/cm3;  
+  G4Material *Cu = new G4Material("Copper",cuRho,1.); 
+  Cu->AddElement(elCu,1.);  
 
   // GE180   
   G4double bigden = 1e9*g/cm3; // why so big? To make these materials not weigh as much in the physics?  
@@ -223,16 +229,177 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   // load all part parameters 
   ReadData("./input/He3-parts.csv");   
+
+  //---- Cu end windows for the target cell 
+  // - main shaft [tube] 
+  // - lip [tube]  
+  // - rounded lip [hemisphere/tube] 
+  // - endcap [hemisphere]  
+
+  // upstream 
+  // build the main shaft 
+  partParameters_t mshu;
+  GetPart("ew_mainShaft_up",mshu); 
+
+  G4Tubs *mainShaft_up = new G4Tubs(mshu.name,
+                                    mshu.r_min    ,mshu.r_max,
+                                    mshu.length/2.,
+                                    mshu.startPhi ,mshu.dPhi);
+
+  G4ThreeVector P_mshu = G4ThreeVector(mshu.x,mshu.y,mshu.z);  
+  G4RotationMatrix *rm_mshu = new G4RotationMatrix();
+  rm_mshu->rotateX(mshu.rx);   
+  rm_mshu->rotateY(mshu.ry);   
+  rm_mshu->rotateZ(mshu.rz);   
+
+  // lip  
+  partParameters_t lipu;
+  GetPart("ew_lip_up",lipu); 
+
+  G4Tubs *lipTube_up = new G4Tubs(lipu.name,
+                                  lipu.r_min    ,lipu.r_max,
+                                  lipu.length/2.,
+                                  lipu.startPhi ,lipu.dPhi);
+
+  G4ThreeVector P_lipu = G4ThreeVector(lipu.x,lipu.y,lipu.z);  
+  G4RotationMatrix *rm_lipu = new G4RotationMatrix();
+  rm_lipu->rotateX(lipu.rx);   
+  rm_lipu->rotateY(lipu.ry);   
+  rm_lipu->rotateZ(lipu.rz);   
+
+  // rounded lip 
+  partParameters_t rlipu;
+  GetPart("ew_rlip_up",rlipu); 
+
+  G4Sphere *roundLip_up = new G4Sphere(rlipu.name,
+                                       rlipu.r_min     ,rlipu.r_max,
+                                       rlipu.startPhi  ,rlipu.dPhi,
+                                       rlipu.startTheta,rlipu.dTheta);
+
+  G4ThreeVector P_rlipu = G4ThreeVector(rlipu.x,rlipu.y,rlipu.z);  
+  G4RotationMatrix *rm_rlipu = new G4RotationMatrix();
+  rm_rlipu->rotateX(rlipu.rx);   
+  rm_rlipu->rotateY(rlipu.ry);   
+  rm_rlipu->rotateZ(rlipu.rz);   
+
+  // endcap 
+  partParameters_t ecu;
+  GetPart("ew_cap_up",ecu); 
+
+  G4Sphere *endcap_up = new G4Sphere(ecu.name,
+                                     ecu.r_min     ,ecu.r_max,
+                                     ecu.startPhi  ,ecu.dPhi,
+                                     ecu.startTheta,ecu.dTheta);
+
+  G4ThreeVector P_ecu = G4ThreeVector(ecu.x,ecu.y,ecu.z);  
+  G4RotationMatrix *rm_ecu = new G4RotationMatrix();
+  rm_ecu->rotateX(ecu.rx);   
+  rm_ecu->rotateY(ecu.ry);   
+  rm_ecu->rotateZ(ecu.rz);  
+
+  // create the union solid 
+  G4UnionSolid *cuEndWindow_up; 
+  // main shaft + lip 
+  cuEndWindow_up = new G4UnionSolid("ew_msu_lu"     ,mainShaft_up  ,lipTube_up ,rm_lipu ,P_lipu); 
+  // add rounded lip 
+  cuEndWindow_up = new G4UnionSolid("ew_msu_lu_rlu" ,cuEndWindow_up,roundLip_up,rm_rlipu,P_rlipu);
+  // endcap  
+  cuEndWindow_up = new G4UnionSolid("cuEndWindow_up",cuEndWindow_up,endcap_up  ,rm_ecu  ,P_ecu); 
+
+  // create the logical volume 
+  G4LogicalVolume *logicCuEndWindow_up = new G4LogicalVolume(cuEndWindow_up,Cu,"logicCuEndWindow_up");
+
+  G4VisAttributes *cuVis = new G4VisAttributes();
+  cuVis->SetColour( G4Colour::Red() );
+  cuVis->SetForceWireframe(true);
+  logicCuEndWindow_up->SetVisAttributes(cuVis); 
+
+  // place it 
+  G4ThreeVector P_cewu = G4ThreeVector(0.*cm,20.*cm,0.*cm); // test location  
+  G4RotationMatrix *rm_cewu = new G4RotationMatrix(); 
+  rm_cewu->rotateX(0.*deg); 
+  rm_cewu->rotateY(180.*deg); 
+  rm_cewu->rotateZ(0.*deg);
+
+  new G4PVPlacement(rm_cewu,
+                    P_cewu, 
+                    logicCuEndWindow_up,   // logical volume 
+                    "physCuEndWindow_up",  // name 
+                    logicWorld,            // logical mother volume is the target chamber 
+                    false,                 // no boolean operations 
+                    0,                     // copy number 
+                    checkOverlaps);        // check overlaps
+
+
+  // downstream 
+  // // main shaft 
+  // partParameters_t mshd;
+  // GetPart("ew_mainShaft_dn",mshd); 
+
+  // G4Tubs *mainShaft_dn = new G4Tubs(mshd.name,
+  //                                   mshd.r_min    ,mshd.r_max,
+  //                                   mshd.length/2.,
+  //                                   mshd.startPhi ,mshd.dPhi); 
+
+  // G4ThreeVector P_mshd = G4ThreeVector(mshd.x,mshd.y,mshd.z);  
+  // G4RotationMatrix *rm_mshd = new G4RotationMatrix();
+  // rm_mshd->rotateX(mshd.rx);   
+  // rm_mshd->rotateY(mshd.ry);   
+  // rm_mshd->rotateZ(mshd.rz);   
+
+  // // lip  
+  // partParameters_t lipd;
+  // GetPart("ew_lip_dn",lipd); 
+
+  // G4Tubs *lipTube_dn = new G4Tubs(lipd.name,
+  //                                 lipd.r_min    ,lipd.r_max,
+  //                                 lipd.length/2.,
+  //                                 lipd.startPhi ,lipd.dPhi);
+
+  // G4ThreeVector P_lipd = G4ThreeVector(lipd.x,lipd.y,lipd.z);  
+  // G4RotationMatrix *rm_lipd = new G4RotationMatrix();
+  // rm_lipd->rotateX(lipd.rx);   
+  // rm_lipd->rotateY(lipd.ry);   
+  // rm_lipd->rotateZ(lipd.rz);   
+
+  // // rounded lip 
+  // partParameters_t rlipd;
+  // GetPart("ew_rlip_dn",rlipd); 
+
+  // G4Sphere *roundLip_dn = new G4Sphere(rlipd.name,
+  //                                      rlipd.r_min     ,rlipd.r_max,
+  //                                      rlipd.startPhi  ,rlipd.dPhi,
+  //                                      rlipd.startTheta,rlipd.dTheta);
+
+  // G4ThreeVector P_rlipd = G4ThreeVector(rlipd.x,rlipd.y,rlipd.z);  
+  // G4RotationMatrix *rm_rlipd = new G4RotationMatrix();
+  // rm_rlipd->rotateX(rlipd.rx);   
+  // rm_rlipd->rotateY(rlipd.ry);   
+  // rm_rlipd->rotateZ(rlipd.rz);   
+
+  // // endcap 
+  // partParameters_t ecd;
+  // GetPart("ew_cap_dn",ecd); 
+
+  // G4Sphere *endcap_dn = new G4Sphere(ecd.name,
+  //                                    ecd.r_min     ,ecd.r_max,
+  //                                    ecd.startPhi  ,ecd.dPhi,
+  //                                    ecd.startTheta,ecd.dTheta);
+
+  // G4ThreeVector P_ecd = G4ThreeVector(ecd.x,ecd.y,ecd.z);  
+  // G4RotationMatrix *rm_ecd = new G4RotationMatrix();
+  // rm_ecd->rotateX(ecd.rx);   
+  // rm_ecd->rotateY(ecd.ry);   
+  // rm_ecd->rotateZ(ecd.rz);   
  
   //---- pumping chamber ----
-
   partParameters_t pumpCh;
   GetPart("pumpingChamber",pumpCh); 
 
   G4Sphere *pumpChamberShape = new G4Sphere(pumpCh.name,
                                             pumpCh.r_min     ,pumpCh.r_max,
-                                            pumpCh.startPhi  ,pumpCh.stopPhi, 
-                                            pumpCh.startTheta,pumpCh.stopTheta); 
+                                            pumpCh.startPhi  ,pumpCh.dPhi, 
+                                            pumpCh.startTheta,pumpCh.dTheta); 
 
   G4ThreeVector P_pc = G4ThreeVector(pumpCh.x,pumpCh.y,pumpCh.z); 
   G4RotationMatrix *rm_pc = new G4RotationMatrix();
@@ -249,7 +416,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *targetChamberShape = new G4Tubs(tgtCh.name,
                                           tgtCh.r_min    ,tgtCh.r_max,
                                           tgtCh.length/2.,
-                                          tgtCh.startPhi ,tgtCh.stopPhi); 
+                                          tgtCh.startPhi ,tgtCh.dPhi); 
 
   G4ThreeVector P_tc = G4ThreeVector(tgtCh.x,tgtCh.y,tgtCh.z); 
   G4RotationMatrix *rm_tc = new G4RotationMatrix();
@@ -265,8 +432,8 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Sphere *endWindowShapeDn = new G4Sphere(ewDn.name,
                                             ewDn.r_min     ,ewDn.r_max,
-                                            ewDn.startPhi  ,ewDn.stopPhi, 
-                                            ewDn.startTheta,ewDn.stopTheta); 
+                                            ewDn.startPhi  ,ewDn.dPhi, 
+                                            ewDn.startTheta,ewDn.dTheta); 
 
   G4ThreeVector P_ewd = G4ThreeVector(ewDn.x,ewDn.y,ewDn.z); 
   G4RotationMatrix *rm_ewd = new G4RotationMatrix();
@@ -282,8 +449,8 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Sphere *endWindowShapeUp = new G4Sphere(ewUp.name,
                                             ewUp.r_min     ,ewUp.r_max,
-                                            ewUp.startPhi  ,ewUp.stopPhi, 
-                                            ewUp.startTheta,ewUp.stopTheta); 
+                                            ewUp.startPhi  ,ewUp.dPhi, 
+                                            ewUp.startTheta,ewUp.dTheta); 
 
   G4ThreeVector P_ewu = G4ThreeVector(ewUp.x,ewUp.y,ewUp.z); 
   G4RotationMatrix *rm_ewu = new G4RotationMatrix();
@@ -298,7 +465,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Torus *transTubeElDnShape = new G4Torus(tted.name,
                                             tted.r_min     ,tted.r_max,tted.r_tor,
-                                            tted.startPhi  ,tted.stopPhi); 
+                                            tted.startPhi  ,tted.dPhi); 
 
   G4ThreeVector P_tted = G4ThreeVector(tted.x,tted.y,tted.z); 
   G4RotationMatrix *rm_tted = new G4RotationMatrix();
@@ -312,7 +479,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Torus *transTubeElUpShape = new G4Torus(tteu.name,
                                             tteu.r_min     ,tteu.r_max,tteu.r_tor,
-                                            tteu.startPhi  ,tteu.stopPhi); 
+                                            tteu.startPhi  ,tteu.dPhi); 
 
   G4ThreeVector P_tteu = G4ThreeVector(tteu.x,tteu.y,tteu.z); 
   G4RotationMatrix *rm_tteu = new G4RotationMatrix();
@@ -326,7 +493,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Torus *transTubeElDnLoShape = new G4Torus(ttedl.name,
                                               ttedl.r_min     ,ttedl.r_max,ttedl.r_tor,
-                                              ttedl.startPhi  ,ttedl.stopPhi); 
+                                              ttedl.startPhi  ,ttedl.dPhi); 
 
   G4ThreeVector P_ttedl = G4ThreeVector(ttedl.x,ttedl.y,ttedl.z); 
   G4RotationMatrix *rm_ttedl = new G4RotationMatrix();
@@ -340,7 +507,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Torus *transTubeElUpLoShape = new G4Torus(tteul.name,
                                               tteul.r_min     ,tteul.r_max,tteul.r_tor,
-                                              tteul.startPhi  ,tteul.stopPhi); 
+                                              tteul.startPhi  ,tteul.dPhi); 
 
   G4ThreeVector P_tteul = G4ThreeVector(tteul.x,tteul.y,tteul.z); 
   G4RotationMatrix *rm_tteul = new G4RotationMatrix();
@@ -354,8 +521,8 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   G4Sphere *transTubeSphere = new G4Sphere(tts.name,
                                            tts.r_min     ,tts.r_max,
-                                           tts.startPhi  ,tts.stopPhi,
-                                           tts.startTheta,tts.stopTheta); 
+                                           tts.startPhi  ,tts.dPhi,
+                                           tts.startTheta,tts.dTheta); 
 
   G4ThreeVector P_tts = G4ThreeVector(tts.x,tts.y,tts.z); 
   G4RotationMatrix *rm_tts = new G4RotationMatrix();
@@ -370,7 +537,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubeUpZShape = new G4Tubs(ttuz.name,
                                          ttuz.r_min    ,ttuz.r_max,
                                          ttuz.length/2.,
-                                         ttuz.startPhi ,ttuz.stopPhi); 
+                                         ttuz.startPhi ,ttuz.dPhi); 
 
   G4ThreeVector P_ttuz = G4ThreeVector(ttuz.x,ttuz.y,ttuz.z); 
   G4RotationMatrix *rm_ttuz = new G4RotationMatrix();
@@ -385,7 +552,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubeUpYShape = new G4Tubs(ttuy.name,
                                          ttuy.r_min    ,ttuy.r_max,
                                          ttuy.length/2.,
-                                         ttuy.startPhi ,ttuy.stopPhi); 
+                                         ttuy.startPhi ,ttuy.dPhi); 
 
   G4ThreeVector P_ttuy = G4ThreeVector(ttuy.x,ttuy.y,ttuy.z); 
   G4RotationMatrix *rm_ttuy = new G4RotationMatrix();
@@ -400,7 +567,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubeDnZShape = new G4Tubs(ttdz.name,
                                          ttdz.r_min    ,ttdz.r_max,
                                          ttdz.length/2.,
-                                         ttdz.startPhi ,ttdz.stopPhi); 
+                                         ttdz.startPhi ,ttdz.dPhi); 
 
   G4ThreeVector P_ttdz = G4ThreeVector(ttdz.x,ttdz.y,ttdz.z); 
   G4RotationMatrix *rm_ttdz = new G4RotationMatrix();
@@ -420,7 +587,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubeDnBYShape = new G4Tubs(ttdby.name,
                                           ttdby.r_min    ,ttdby.r_max,
                                           ttdby.length/2.,
-                                          ttdby.startPhi ,ttdby.stopPhi); 
+                                          ttdby.startPhi ,ttdby.dPhi); 
 
   G4ThreeVector P_ttdby = G4ThreeVector(ttdby.x,ttdby.y,ttdby.z); 
   G4RotationMatrix *rm_ttdby = new G4RotationMatrix();
@@ -435,7 +602,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubeDnAYShape = new G4Tubs(ttday.name,
                                           ttday.r_min    ,ttday.r_max,
                                           ttday.length/2.,
-                                          ttday.startPhi ,ttday.stopPhi); 
+                                          ttday.startPhi ,ttday.dPhi); 
 
   G4ThreeVector P_ttday = G4ThreeVector(ttday.x,ttday.y,ttday.z); 
   G4RotationMatrix *rm_ttday = new G4RotationMatrix();
@@ -450,7 +617,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubePostDnShape = new G4Tubs(ttpdy.name,
                                             ttpdy.r_min    ,ttpdy.r_max,
                                             ttpdy.length/2.,
-                                            ttpdy.startPhi ,ttpdy.stopPhi); 
+                                            ttpdy.startPhi ,ttpdy.dPhi); 
 
   G4ThreeVector P_ttpdy = G4ThreeVector(ttpdy.x,ttpdy.y,ttpdy.z); 
   G4RotationMatrix *rm_ttpdy = new G4RotationMatrix();
@@ -465,7 +632,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4Tubs *transTubePostUpShape = new G4Tubs(ttpuy.name,
                                             ttpuy.r_min    ,ttpuy.r_max,
                                             ttpuy.length/2.,
-                                            ttpuy.startPhi ,ttpuy.stopPhi); 
+                                            ttpuy.startPhi ,ttpuy.dPhi); 
 
   G4ThreeVector P_ttpuy = G4ThreeVector(ttpuy.x,ttpuy.y,ttpuy.z); 
   G4RotationMatrix *rm_ttpuy = new G4RotationMatrix();
@@ -531,18 +698,48 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   new G4PVPlacement(0,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,checkOverlaps);       
 
   //---- polarized 3He ----
-  // TODO: Add "end windows" of 3He 
   G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
   G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
   pol3He->AddElement(el3He, 1); 
 
-  // cylinder of polarized 3He 
-  G4double innerRadius = 0.0*cm; 
-  G4double outerRadius = tgtCh.r_min;     // fill the target chamber  
-  G4double length      = tgtCh.length/2.; // half-length of target chamber       
-  G4double startAngle  = 0.*deg;  
-  G4double stopAngle   = 360.*deg;   // full circle 
-  G4Tubs *he3Tube = new G4Tubs("He3_tube",innerRadius,outerRadius,length,startAngle,stopAngle);
+  // cylinder of polarized 3He
+  // will be a UNION of materials: main tube + ends 
+  // - this will take the same shape as target chamber, but OD = target chamber ID
+
+  //---- 3He target chamber  
+  partParameters_t he3_tc = tgtCh;  
+  he3_tc.r_min = 0.*cm; 
+  he3_tc.r_max = tgtCh.r_min; 
+  G4Tubs *he3tcShape = new G4Tubs("He3_tc",
+                                  he3_tc.r_min    ,he3_tc.r_max,
+                                  he3_tc.length/2.,
+                                  he3_tc.startPhi ,he3_tc.dPhi);
+
+  //---- 3He "end window" (upstream)   
+  partParameters_t he3_ewu = ewUp;  
+  he3_ewu.r_min = 0.*cm; 
+  he3_ewu.r_max = ewUp.r_min; 
+  G4Sphere *he3ewuShape = new G4Sphere(he3_ewu.name,
+                                       he3_ewu.r_min     ,he3_ewu.r_max,
+                                       he3_ewu.startPhi  ,he3_ewu.dPhi, 
+                                       he3_ewu.startTheta,he3_ewu.dTheta); 
+
+  //---- 3He "end window" (downstream)   
+  partParameters_t he3_ewd = ewDn;  
+  he3_ewd.r_min = 0.*cm; 
+  he3_ewd.r_max = ewDn.r_min; 
+  G4Sphere *he3ewdShape = new G4Sphere(he3_ewd.name,
+                                       he3_ewd.r_min     ,he3_ewd.r_max,
+                                       he3_ewd.startPhi  ,he3_ewd.dPhi, 
+                                       he3_ewd.startTheta,he3_ewd.dTheta); 
+
+  // Union solid 
+  // use same rotation and positional vectors as glass shell!  
+  G4UnionSolid *he3Tube;
+  // target chamber + upstream window 
+  he3Tube = new G4UnionSolid("he3_tc_ewu",he3tcShape,he3ewuShape,rm_ewu,P_ewu);
+  // downstream window  
+  he3Tube = new G4UnionSolid("he3Tube"   ,he3Tube,he3ewdShape,rm_ewd,P_ewd);  
 
   // logical volume of He3
   G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
@@ -586,8 +783,8 @@ int He3TargetDetectorConstruction::GetPart(const char *partName,partParameters_t
       std::cout << " major radius (torus): " << data.r_tor << std::endl;
       std::cout << " min radius: " << data.r_min << " max radius: " << data.r_max << std::endl; 
       std::cout << " length: " << data.length << std::endl; 
-      std::cout << " THETA start theta: " << data.startTheta << " stop theta: " << data.stopTheta << std::endl; 
-      std::cout << " PHI start phi: " << data.startPhi   << " stop phi: "   << data.stopPhi << std::endl; 
+      std::cout << " THETA start theta: " << data.startTheta << " d theta: " << data.dTheta << std::endl; 
+      std::cout << " PHI start phi: " << data.startPhi   << " d phi: "   << data.dPhi << std::endl; 
       std::cout << " POS x: " << data.x << " y: " << data.y << " z: " << data.z << std::endl; 
       std::cout << " ROT rx: " << data.rx << " ry: " << data.ry << " rz: " << data.rz << std::endl; 
       std::cout << "------------------------------------------------------" << std::endl; 
@@ -630,7 +827,7 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
 
    partParameters_t dataPt; 
    double r_min=0,r_max=0,r_tor=0;
-   double length=0,startTheta=0,stopTheta=0,startPhi=0,stopPhi=0;
+   double length=0,startTheta=0,dTheta=0,startPhi=0,dPhi=0;
    double x=0,y=0,z=0,rx=0,ry=0,rz=0;
    double LEN_UNIT=1.;
    double DEG_UNIT=1.;
@@ -654,9 +851,9 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       r_max           = std::atof( col[6].c_str()  );  
       length          = std::atof( col[7].c_str()  );  
       startTheta      = std::atof( col[8].c_str()  );  
-      stopTheta       = std::atof( col[9].c_str()  );  
+      dTheta          = std::atof( col[9].c_str()  );  
       startPhi        = std::atof( col[10].c_str() );  
-      stopPhi         = std::atof( col[11].c_str() );  
+      dPhi            = std::atof( col[11].c_str() );  
       x               = std::atof( col[12].c_str() );  
       y               = std::atof( col[13].c_str() );  
       z               = std::atof( col[14].c_str() );  
@@ -676,9 +873,9 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       dataPt.r_max      = LEN_UNIT*r_max;  
       dataPt.length     = LEN_UNIT*length;  
       dataPt.startTheta = DEG_UNIT*startTheta;  
-      dataPt.stopTheta  = DEG_UNIT*stopTheta;  
+      dataPt.dTheta     = DEG_UNIT*dTheta;  
       dataPt.startPhi   = DEG_UNIT*startPhi;  
-      dataPt.stopPhi    = DEG_UNIT*stopPhi;  
+      dataPt.dPhi       = DEG_UNIT*dPhi;  
       dataPt.x          = LEN_UNIT*x;  
       dataPt.y          = LEN_UNIT*y;  
       dataPt.z          = LEN_UNIT*z;  
@@ -690,9 +887,9 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
 	     << " major radius (torus): " << dataPt.r_tor 
 	     << " min radius: "           << dataPt.r_min      << " max radius: " << dataPt.r_max 
 	     << " length: "               << dataPt.length 
-	     << " start theta: "          << dataPt.startTheta << " stop theta: " << dataPt.stopTheta 
-	     << " start phi: "            << dataPt.startPhi   << " stop phi: "   << dataPt.stopPhi 
-	     << " x: "                    << dataPt.x          << " y: "          << dataPt.y 
+	     << " start theta: "          << dataPt.startTheta << " dtheta: " << dataPt.dTheta 
+	     << " start phi: "            << dataPt.startPhi   << " dphi: "   << dataPt.dPhi 
+	     << " x: "                    << dataPt.x          << " y: "      << dataPt.y 
 	     << " z: "                    << dataPt.z 
 	     << " rx: "                   << dataPt.rx         << " ry: " << dataPt.ry 
 	     << " rz: "                   << dataPt.rz << G4endl;  
