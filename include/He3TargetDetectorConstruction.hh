@@ -33,7 +33,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <string>
-#include <vector> 
+#include <vector>
+#include <map>  
 
 #include "G4VUserDetectorConstruction.hh"
 #include "globals.hh"
@@ -80,8 +81,12 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
 
   private:
    bool fDebug;
-   std::vector<partParameters_t> fPartData; 
+   std::vector<partParameters_t> fPartData;
+   std::map<G4String,G4Material *> fMaterialsMap;  
 
+   G4Material *GetMaterial(G4String name); 
+
+   int ConstructMaterials(); 
    int ReadData(const char *inpath);
    int SplitString(const char delim,const std::string inStr,std::vector<std::string> &out); 
    int GetPart(const char *partName,partParameters_t &data);  

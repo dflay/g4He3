@@ -42,19 +42,20 @@ He3TargetDetectorConstruction::~He3TargetDetectorConstruction()
 //______________________________________________________________________________
 G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 {  
-  // Get nist material manager
-  G4NistManager* nist = G4NistManager::Instance();
+
+  // build materials 
+  if( fMaterialsMap.empty() ) ConstructMaterials();
+
+  // load all part parameters 
+  ReadData("./input/He3-parts.csv");   
 
   // Option to switch on/off checking of volumes overlaps
-  //
   G4bool checkOverlaps = true;
 
-  //     
   // World
-  //
   G4double world_sizeXY = 5*m;
   G4double world_sizeZ  = 5*m;
-  G4Material* world_mat = nist->FindOrBuildMaterial("G4_AIR");
+  G4Material* world_mat = GetMaterial("G4air"); 
   
   G4Box* solidWorld =    
     new G4Box("World",                       //its name
@@ -164,72 +165,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // //
   // fScoringVolume = logicShape2;
 
-  // Define elements, compounds here that we'll need 
-  // We don't need to supply the molar mass, because G4NistManager does it for us!
-  G4int Z,N,ncomponents; 
-  G4double abundance;
-
-  G4Isotope *iso_3He = new G4Isotope( "He3", Z=2, N=3 );
-
-  G4Element *el3He = new G4Element("Helium3","3He",ncomponents=1); //Define isotopically pure Helium-3 
-  el3He->AddIsotope( iso_3He, abundance=100.0*perCent );
-
-  G4Element *elO  = nist->FindOrBuildElement("O");
-  G4Element *elAl = nist->FindOrBuildElement("Al");
-  G4Element *elSi = nist->FindOrBuildElement("Si");
-  G4Element *elCa = nist->FindOrBuildElement("Ca");
-  G4Element *elSr = nist->FindOrBuildElement("Sr");
-  G4Element *elBa = nist->FindOrBuildElement("Ba");
-  G4Element *elCu = nist->FindOrBuildElement("Cu");
-
-  // Cu
-  G4double cuRho = 8.96*g/cm3;  
-  G4Material *Cu = new G4Material("Copper",cuRho,1.); 
-  Cu->AddElement(elCu,1.);  
-
-  // GE180   
-  G4double bigden = 1e9*g/cm3; // why so big? To make these materials not weigh as much in the physics?  
-  // gather necessary molecules and compounds  
-  // SiO2 60.3%
-  G4Material* SiO2 = new G4Material("GE180_SiO2", 2.2*g/cm3, 2 );
-  SiO2->AddElement(elSi, 1);
-  SiO2->AddElement(elO, 2);
-  // fMaterialsMap["GE180_SiO2"] = SiO2;
-  // BaO  18.2%
-  G4Material* BaO = new G4Material("GE180_BaO", bigden, 2 );
-  BaO->AddElement(elBa, 1);
-  BaO->AddElement(elO, 1);
-  // fMaterialsMap["GE180_BaO"] = BaO;
-  // Al2O3 14.3%
-  G4Material* Al2O3 = new G4Material("GE180_Al2O3", bigden, 2 );
-  Al2O3->AddElement(elAl, 2);
-  Al2O3->AddElement(elO, 3);
-  // fMaterialsMap["GE180_Al2O3"] = Al2O3;
-  // CaO   6.5%
-  G4Material* CaO = new G4Material("GE180_CaO", bigden, 2 );
-  CaO->AddElement(elCa, 1);
-  CaO->AddElement(elO, 1);
-  // fMaterialsMap["GE180_CaO"] = CaO;
-  // SrO   0.25%
-  G4Material* SrO = new G4Material("GE180_SrO", bigden, 2 );
-  SrO->AddElement(elSr, 1);
-  SrO->AddElement(elO, 1);
-  // fMaterialsMap["GE180_SrO"] = SrO;
- 
-  // Density 2.76 g/cm^3
-  // Index of Refraction 1.536
-  G4Material* GE180 = new G4Material("GE180", 2.76*g/cm3, 5);
-  GE180->AddMaterial(SiO2 , 0.6039);
-  GE180->AddMaterial(BaO  , 0.1829);
-  GE180->AddMaterial(Al2O3, 0.1439);
-  GE180->AddMaterial(CaO  , 0.0659);
-  GE180->AddMaterial(SrO  , 0.0034);
-
-  //===================================== END Materials =====================================
-
-  // load all part parameters 
-  ReadData("./input/He3-parts.csv");   
-
   //---- Cu end windows for the target cell 
   // - main shaft [tube] 
   // - lip [tube]  
@@ -307,15 +242,21 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   cuEndWindow_up = new G4UnionSolid("cuEndWindow_up",cuEndWindow_up,endcap_up  ,rm_ecu  ,P_ecu); 
 
   // create the logical volume 
-  G4LogicalVolume *logicCuEndWindow_up = new G4LogicalVolume(cuEndWindow_up,Cu,"logicCuEndWindow_up");
+  G4LogicalVolume *logicCuEndWindow_up = new G4LogicalVolume(cuEndWindow_up,GetMaterial("Cu"),"logicCuEndWindow_up");
 
   G4VisAttributes *cuVis = new G4VisAttributes();
   cuVis->SetColour( G4Colour::Red() );
   cuVis->SetForceWireframe(true);
   logicCuEndWindow_up->SetVisAttributes(cuVis); 
 
-  // place it 
-  G4ThreeVector P_cewu = G4ThreeVector(0.*cm,20.*cm,0.*cm); // test location  
+  // place it at the end of the target chamber 
+  partParameters_t myTC; 
+  GetPart("targetChamber",myTC); 
+  G4double x_cewu = 0.*cm; 
+  G4double y_cewu = 0.*cm;   
+  G4double z_cewu = (-1.)*(myTC.length/2. + 0.25*mshu.length);  // this will make the large lip flush with the glass
+  
+  G4ThreeVector P_cewu = G4ThreeVector(x_cewu,y_cewu,z_cewu); // test location  
   G4RotationMatrix *rm_cewu = new G4RotationMatrix(); 
   rm_cewu->rotateX(0.*deg); 
   rm_cewu->rotateY(180.*deg); 
@@ -330,67 +271,99 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
                     0,                     // copy number 
                     checkOverlaps);        // check overlaps
 
-
   // downstream 
-  // // main shaft 
-  // partParameters_t mshd;
-  // GetPart("ew_mainShaft_dn",mshd); 
+  // main shaft 
+  partParameters_t mshd;
+  GetPart("ew_mainShaft_dn",mshd); 
 
-  // G4Tubs *mainShaft_dn = new G4Tubs(mshd.name,
-  //                                   mshd.r_min    ,mshd.r_max,
-  //                                   mshd.length/2.,
-  //                                   mshd.startPhi ,mshd.dPhi); 
+  G4Tubs *mainShaft_dn = new G4Tubs(mshd.name,
+                                    mshd.r_min    ,mshd.r_max,
+                                    mshd.length/2.,
+                                    mshd.startPhi ,mshd.dPhi); 
 
-  // G4ThreeVector P_mshd = G4ThreeVector(mshd.x,mshd.y,mshd.z);  
-  // G4RotationMatrix *rm_mshd = new G4RotationMatrix();
-  // rm_mshd->rotateX(mshd.rx);   
-  // rm_mshd->rotateY(mshd.ry);   
-  // rm_mshd->rotateZ(mshd.rz);   
+  G4ThreeVector P_mshd = G4ThreeVector(mshd.x,mshd.y,mshd.z);  
+  G4RotationMatrix *rm_mshd = new G4RotationMatrix();
+  rm_mshd->rotateX(mshd.rx);   
+  rm_mshd->rotateY(mshd.ry);   
+  rm_mshd->rotateZ(mshd.rz);   
 
-  // // lip  
-  // partParameters_t lipd;
-  // GetPart("ew_lip_dn",lipd); 
+  // lip  
+  partParameters_t lipd;
+  GetPart("ew_lip_dn",lipd); 
 
-  // G4Tubs *lipTube_dn = new G4Tubs(lipd.name,
-  //                                 lipd.r_min    ,lipd.r_max,
-  //                                 lipd.length/2.,
-  //                                 lipd.startPhi ,lipd.dPhi);
+  G4Tubs *lipTube_dn = new G4Tubs(lipd.name,
+                                  lipd.r_min    ,lipd.r_max,
+                                  lipd.length/2.,
+                                  lipd.startPhi ,lipd.dPhi);
 
-  // G4ThreeVector P_lipd = G4ThreeVector(lipd.x,lipd.y,lipd.z);  
-  // G4RotationMatrix *rm_lipd = new G4RotationMatrix();
-  // rm_lipd->rotateX(lipd.rx);   
-  // rm_lipd->rotateY(lipd.ry);   
-  // rm_lipd->rotateZ(lipd.rz);   
+  G4ThreeVector P_lipd = G4ThreeVector(lipd.x,lipd.y,lipd.z);  
+  G4RotationMatrix *rm_lipd = new G4RotationMatrix();
+  rm_lipd->rotateX(lipd.rx);   
+  rm_lipd->rotateY(lipd.ry);   
+  rm_lipd->rotateZ(lipd.rz);   
 
-  // // rounded lip 
-  // partParameters_t rlipd;
-  // GetPart("ew_rlip_dn",rlipd); 
+  // rounded lip 
+  partParameters_t rlipd;
+  GetPart("ew_rlip_dn",rlipd); 
 
-  // G4Sphere *roundLip_dn = new G4Sphere(rlipd.name,
-  //                                      rlipd.r_min     ,rlipd.r_max,
-  //                                      rlipd.startPhi  ,rlipd.dPhi,
-  //                                      rlipd.startTheta,rlipd.dTheta);
+  G4Sphere *roundLip_dn = new G4Sphere(rlipd.name,
+                                       rlipd.r_min     ,rlipd.r_max,
+                                       rlipd.startPhi  ,rlipd.dPhi,
+                                       rlipd.startTheta,rlipd.dTheta);
 
-  // G4ThreeVector P_rlipd = G4ThreeVector(rlipd.x,rlipd.y,rlipd.z);  
-  // G4RotationMatrix *rm_rlipd = new G4RotationMatrix();
-  // rm_rlipd->rotateX(rlipd.rx);   
-  // rm_rlipd->rotateY(rlipd.ry);   
-  // rm_rlipd->rotateZ(rlipd.rz);   
+  G4ThreeVector P_rlipd = G4ThreeVector(rlipd.x,rlipd.y,rlipd.z);  
+  G4RotationMatrix *rm_rlipd = new G4RotationMatrix();
+  rm_rlipd->rotateX(rlipd.rx);   
+  rm_rlipd->rotateY(rlipd.ry);   
+  rm_rlipd->rotateZ(rlipd.rz);   
 
-  // // endcap 
-  // partParameters_t ecd;
-  // GetPart("ew_cap_dn",ecd); 
+  // endcap 
+  partParameters_t ecd;
+  GetPart("ew_cap_dn",ecd); 
 
-  // G4Sphere *endcap_dn = new G4Sphere(ecd.name,
-  //                                    ecd.r_min     ,ecd.r_max,
-  //                                    ecd.startPhi  ,ecd.dPhi,
-  //                                    ecd.startTheta,ecd.dTheta);
+  G4Sphere *endcap_dn = new G4Sphere(ecd.name,
+                                     ecd.r_min     ,ecd.r_max,
+                                     ecd.startPhi  ,ecd.dPhi,
+                                     ecd.startTheta,ecd.dTheta);
 
-  // G4ThreeVector P_ecd = G4ThreeVector(ecd.x,ecd.y,ecd.z);  
-  // G4RotationMatrix *rm_ecd = new G4RotationMatrix();
-  // rm_ecd->rotateX(ecd.rx);   
-  // rm_ecd->rotateY(ecd.ry);   
-  // rm_ecd->rotateZ(ecd.rz);   
+  G4ThreeVector P_ecd = G4ThreeVector(ecd.x,ecd.y,ecd.z);  
+  G4RotationMatrix *rm_ecd = new G4RotationMatrix();
+  rm_ecd->rotateX(ecd.rx);   
+  rm_ecd->rotateY(ecd.ry);   
+  rm_ecd->rotateZ(ecd.rz);   
+
+  // create the union solid 
+  G4UnionSolid *cuEndWindow_dn; 
+  // main shaft + lip 
+  cuEndWindow_dn = new G4UnionSolid("ew_msu_ld"     ,mainShaft_dn  ,lipTube_dn ,rm_lipd ,P_lipd); 
+  // add rounded lip 
+  cuEndWindow_dn = new G4UnionSolid("ew_msu_ld_rld" ,cuEndWindow_dn,roundLip_dn,rm_rlipd,P_rlipd);
+  // endcap  
+  cuEndWindow_dn = new G4UnionSolid("cuEndWindow_dn",cuEndWindow_dn,endcap_dn  ,rm_ecd  ,P_ecd); 
+
+  // create the logical volume 
+  G4LogicalVolume *logicCuEndWindow_dn = new G4LogicalVolume(cuEndWindow_dn,GetMaterial("Cu"),"logicCuEndWindow_dn");
+  logicCuEndWindow_dn->SetVisAttributes(cuVis); 
+
+  // place it at the end of the target chamber 
+  G4double x_cewd = 0.*cm; 
+  G4double y_cewd = 0.*cm;   
+  G4double z_cewd = myTC.length/2. + 0.25*mshd.length;  // this will make the large lip flush with the glass
+  
+  G4ThreeVector P_cewd = G4ThreeVector(x_cewd,y_cewd,z_cewd); // test location  
+  G4RotationMatrix *rm_cewd = new G4RotationMatrix(); 
+  rm_cewd->rotateX(0.*deg); 
+  rm_cewd->rotateY(0.*deg); 
+  rm_cewd->rotateZ(0.*deg);
+
+  new G4PVPlacement(rm_cewd,
+                    P_cewd, 
+                    logicCuEndWindow_dn,   // logical volume 
+                    "physCuEndWindow_dn",  // name 
+                    logicWorld,            // logical mother volume is the target chamber 
+                    false,                 // no boolean operations 
+                    0,                     // copy number 
+                    checkOverlaps);        // check overlaps
  
   //---- pumping chamber ----
   partParameters_t pumpCh;
@@ -644,14 +617,14 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   G4UnionSolid *glassCell; // this is the top level object everything becomes 
 
   // build the target chamber + endcaps
-  // target chamber + upstream window 
-  glassCell = new G4UnionSolid("gc_tc_ewu",targetChamberShape,endWindowShapeUp,rm_ewu,P_ewu);
-  // downstream window  
-  glassCell = new G4UnionSolid("gc_tc_ewud",glassCell,endWindowShapeDn,rm_ewd,P_ewd);  
+  // // target chamber + upstream window 
+  // glassCell = new G4UnionSolid("gc_tc_ewu",targetChamberShape,endWindowShapeUp,rm_ewu,P_ewu);
+  // // downstream window  
+  // glassCell = new G4UnionSolid("gc_tc_ewud",glassCell,endWindowShapeDn,rm_ewd,P_ewd);  
 
   // transfer tube posts
   // upstream  
-  glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,glassCell,transTubePostUpShape,rm_ttpuy,P_ttpuy);  
+  glassCell = new G4UnionSolid("gc_tc_ewud_pu" ,targetChamberShape,transTubePostUpShape,rm_ttpuy,P_ttpuy);  
   // downstream 
   glassCell = new G4UnionSolid("gc_tc_ewud_pud",glassCell,transTubePostDnShape,rm_ttpdy,P_ttpdy); 
 
@@ -686,83 +659,189 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // pumping chamber.  also change the name since everything is connected now 
   glassCell = new G4UnionSolid("glassCell",glassCell,pumpChamberShape,rm_pc,P_pc);
 
-  G4LogicalVolume *logicGlassCell = new G4LogicalVolume(glassCell,GE180,"logicGlassCell");
+  G4LogicalVolume *logicGlassCell = new G4LogicalVolume(glassCell,GetMaterial("GE180"),"logicGlassCell");
 
   G4VisAttributes *visGC = new G4VisAttributes(); 
   visGC->SetColour( G4Colour::White() );
   visGC->SetForceWireframe(true);  
   logicGlassCell->SetVisAttributes(visGC); 
 
-  // place the volume. note that this is relative to the *target chamber* as that is the first object in the union 
-  G4ThreeVector P_tgt_o = G4ThreeVector(0.*cm,0.*cm,0.*cm);    
-  new G4PVPlacement(0,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,checkOverlaps);       
-
-  //---- polarized 3He ----
-  G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
-  G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
-  pol3He->AddElement(el3He, 1); 
-
-  // cylinder of polarized 3He
-  // will be a UNION of materials: main tube + ends 
-  // - this will take the same shape as target chamber, but OD = target chamber ID
-
-  //---- 3He target chamber  
-  partParameters_t he3_tc = tgtCh;  
-  he3_tc.r_min = 0.*cm; 
-  he3_tc.r_max = tgtCh.r_min; 
-  G4Tubs *he3tcShape = new G4Tubs("He3_tc",
-                                  he3_tc.r_min    ,he3_tc.r_max,
-                                  he3_tc.length/2.,
-                                  he3_tc.startPhi ,he3_tc.dPhi);
-
-  //---- 3He "end window" (upstream)   
-  partParameters_t he3_ewu = ewUp;  
-  he3_ewu.r_min = 0.*cm; 
-  he3_ewu.r_max = ewUp.r_min; 
-  G4Sphere *he3ewuShape = new G4Sphere(he3_ewu.name,
-                                       he3_ewu.r_min     ,he3_ewu.r_max,
-                                       he3_ewu.startPhi  ,he3_ewu.dPhi, 
-                                       he3_ewu.startTheta,he3_ewu.dTheta); 
-
-  //---- 3He "end window" (downstream)   
-  partParameters_t he3_ewd = ewDn;  
-  he3_ewd.r_min = 0.*cm; 
-  he3_ewd.r_max = ewDn.r_min; 
-  G4Sphere *he3ewdShape = new G4Sphere(he3_ewd.name,
-                                       he3_ewd.r_min     ,he3_ewd.r_max,
-                                       he3_ewd.startPhi  ,he3_ewd.dPhi, 
-                                       he3_ewd.startTheta,he3_ewd.dTheta); 
-
-  // Union solid 
-  // use same rotation and positional vectors as glass shell!  
-  G4UnionSolid *he3Tube;
-  // target chamber + upstream window 
-  he3Tube = new G4UnionSolid("he3_tc_ewu",he3tcShape,he3ewuShape,rm_ewu,P_ewu);
-  // downstream window  
-  he3Tube = new G4UnionSolid("he3Tube"   ,he3Tube,he3ewdShape,rm_ewd,P_ewd);  
-
-  // logical volume of He3
-  G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,pol3He,"logicHe3");  
-   
-  // set the color of He3 
-  G4VisAttributes *visHe3 = new G4VisAttributes(); 
-  visHe3->SetColour( G4Colour::Yellow() );
-  visHe3->SetForceWireframe(true);  
-  logicHe3->SetVisAttributes(visHe3);  
+  // place the volume. note that this is relative to the *target chamber* 
+  // as that is the first object in the union 
+  G4ThreeVector P_tgt_o = G4ThreeVector(0.*cm,0.*cm,0.*cm);   
+  G4RotationMatrix *rm_gc = new G4RotationMatrix(); 
+  rm_gc->rotateX(0.*deg);  
+  rm_gc->rotateY(180.*deg);  
+  rm_gc->rotateZ(180.*deg); 
  
-  // placement of He3 is *inside target chamber*  
-  G4ThreeVector posHe3 = P_tgt_o; 
-  new G4PVPlacement(0,                 // rotation
-                   posHe3,             // position 
-                   logicHe3,           // logical volume 
-                   "physHe3",          // name 
-                   logicGlassCell,     // logical mother volume is the target chamber 
-                   false,              // no boolean operations 
-                   0,                  // copy number 
-                   checkOverlaps);     // check overlaps
+  new G4PVPlacement(rm_gc,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,checkOverlaps);       
+
+  // // cylinder of polarized 3He
+  // // will be a UNION of materials: main tube + ends 
+  // // - this will take the same shape as target chamber, but OD = target chamber ID
+
+  // //---- 3He target chamber  
+  // partParameters_t he3_tc = tgtCh;  
+  // he3_tc.r_min = 0.*cm; 
+  // he3_tc.r_max = tgtCh.r_min; 
+  // G4Tubs *he3tcShape = new G4Tubs("He3_tc",
+  //                                 he3_tc.r_min    ,he3_tc.r_max,
+  //                                 he3_tc.length/2.,
+  //                                 he3_tc.startPhi ,he3_tc.dPhi);
+
+  // //---- 3He "end window" (upstream)   
+  // partParameters_t he3_ewu = ewUp;  
+  // he3_ewu.r_min = 0.*cm; 
+  // he3_ewu.r_max = ewUp.r_min; 
+  // G4Sphere *he3ewuShape = new G4Sphere(he3_ewu.name,
+  //                                      he3_ewu.r_min     ,he3_ewu.r_max,
+  //                                      he3_ewu.startPhi  ,he3_ewu.dPhi, 
+  //                                      he3_ewu.startTheta,he3_ewu.dTheta); 
+
+  // //---- 3He "end window" (downstream)   
+  // partParameters_t he3_ewd = ewDn;  
+  // he3_ewd.r_min = 0.*cm; 
+  // he3_ewd.r_max = ewDn.r_min; 
+  // G4Sphere *he3ewdShape = new G4Sphere(he3_ewd.name,
+  //                                      he3_ewd.r_min     ,he3_ewd.r_max,
+  //                                      he3_ewd.startPhi  ,he3_ewd.dPhi, 
+  //                                      he3_ewd.startTheta,he3_ewd.dTheta); 
+
+  // // Union solid 
+  // // use same rotation and positional vectors as glass shell!  
+  // G4UnionSolid *he3Tube;
+  // // target chamber + upstream window 
+  // he3Tube = new G4UnionSolid("he3_tc_ewu",he3tcShape,he3ewuShape,rm_ewu,P_ewu);
+  // // downstream window  
+  // he3Tube = new G4UnionSolid("he3Tube"   ,he3Tube,he3ewdShape,rm_ewd,P_ewd);  
+
+  // // logical volume of He3
+  // G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,GetMaterial("He3"),"logicHe3");  
+  //  
+  // // set the color of He3 
+  // G4VisAttributes *visHe3 = new G4VisAttributes(); 
+  // visHe3->SetColour( G4Colour::Yellow() );
+  // visHe3->SetForceWireframe(true);  
+  // logicHe3->SetVisAttributes(visHe3);  
+ 
+  // // placement of He3 is *inside target chamber*  
+  // G4ThreeVector posHe3 = P_tgt_o; 
+  // new G4PVPlacement(0,                 // rotation
+  //                  posHe3,             // position 
+  //                  logicHe3,           // logical volume 
+  //                  "physHe3",          // name 
+  //                  logicGlassCell,     // logical mother volume is the target chamber 
+  //                  false,              // no boolean operations 
+  //                  0,                  // copy number 
+  //                  checkOverlaps);     // check overlaps
 
   // always return the physical World
   return physWorld;
+}
+//______________________________________________________________________________
+G4Material *He3TargetDetectorConstruction::GetMaterial(G4String name){
+
+  std::map<G4String, G4Material*>::iterator it = fMaterialsMap.find( name );
+
+  if( it != fMaterialsMap.end() ){
+    return fMaterialsMap[name];
+  } else {
+    std::cout << "[He3TargetDetectorConstruction::GetMaterial]: ERROR Material " << name.data() 
+              << " not found! " << std::endl;
+    exit(1);
+    return NULL;
+  }
+
+}
+//______________________________________________________________________________
+int He3TargetDetectorConstruction::ConstructMaterials(){
+
+   // Get nist material manager
+   G4NistManager* nist = G4NistManager::Instance();
+
+   // world material 
+   G4Material *G4Air = nist->FindOrBuildMaterial("G4_AIR");
+   fMaterialsMap["G4air"] = G4Air; 
+
+   // Define elements, compounds here that we'll need 
+   // We don't need to supply the molar mass, because G4NistManager does it for us!
+   G4int Z,N,ncomponents; 
+   G4double abundance;
+
+   G4Isotope *iso_3He = new G4Isotope( "He3", Z=2, N=3 );
+
+   G4Element *el3He = new G4Element("Helium3","3He",ncomponents=1); //Define isotopically pure Helium-3 
+   el3He->AddIsotope( iso_3He, abundance=100.0*perCent );
+
+   G4Element *elO  = nist->FindOrBuildElement("O");
+   G4Element *elAl = nist->FindOrBuildElement("Al");
+   G4Element *elSi = nist->FindOrBuildElement("Si");
+   G4Element *elCa = nist->FindOrBuildElement("Ca");
+   G4Element *elSr = nist->FindOrBuildElement("Sr");
+   G4Element *elBa = nist->FindOrBuildElement("Ba");
+   G4Element *elCu = nist->FindOrBuildElement("Cu");
+
+   // Cu
+   G4double cuRho = 8.96*g/cm3;  
+   G4Material *Cu = new G4Material("Copper",cuRho,1.); 
+   Cu->AddElement(elCu,1.);  
+
+   fMaterialsMap["Cu"] = Cu; 
+
+   // GE180   
+   G4double bigden = 1e9*g/cm3; // why so big? To make these materials not weigh as much in the physics?  
+   // gather necessary molecules and compounds  
+   // SiO2 60.3%
+   G4Material* SiO2 = new G4Material("GE180_SiO2", 2.2*g/cm3, 2 );
+   SiO2->AddElement(elSi, 1);
+   SiO2->AddElement(elO, 2);
+   fMaterialsMap["GE180_SiO2"] = SiO2;
+   // BaO  18.2%
+   G4Material* BaO = new G4Material("GE180_BaO", bigden, 2 );
+   BaO->AddElement(elBa, 1);
+   BaO->AddElement(elO, 1);
+   fMaterialsMap["GE180_BaO"] = BaO;
+   // Al2O3 14.3%
+   G4Material* Al2O3 = new G4Material("GE180_Al2O3", bigden, 2 );
+   Al2O3->AddElement(elAl, 2);
+   Al2O3->AddElement(elO, 3);
+   fMaterialsMap["GE180_Al2O3"] = Al2O3;
+   // CaO   6.5%
+   G4Material* CaO = new G4Material("GE180_CaO", bigden, 2 );
+   CaO->AddElement(elCa, 1);
+   CaO->AddElement(elO, 1);
+   fMaterialsMap["GE180_CaO"] = CaO;
+   // SrO   0.25%
+   G4Material* SrO = new G4Material("GE180_SrO", bigden, 2 );
+   SrO->AddElement(elSr, 1);
+   SrO->AddElement(elO, 1);
+   fMaterialsMap["GE180_SrO"] = SrO;
+
+   // Density 2.76 g/cm^3
+   // Index of Refraction 1.536
+   G4Material* GE180 = new G4Material("GE180", 2.76*g/cm3, 5);
+   GE180->AddMaterial(SiO2 , 0.6039);
+   GE180->AddMaterial(BaO  , 0.1829);
+   GE180->AddMaterial(Al2O3, 0.1439);
+   GE180->AddMaterial(CaO  , 0.0659);
+   GE180->AddMaterial(SrO  , 0.0034);
+   fMaterialsMap["GE180"] = GE180;
+
+   //---- polarized 3He ----
+   G4double gasden = 10.77*atmosphere*(3.016*g/Avogadro)/(300*kelvin*k_Boltzmann);
+   G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
+   pol3He->AddElement(el3He, 1);
+   fMaterialsMap["He3"] = pol3He;  
+
+   // print for confirmation
+   if(fDebug){
+      std::cout << "Constructed materials: " << std::endl; 
+      for(auto it=fMaterialsMap.cbegin(); it!=fMaterialsMap.cend(); ++it){
+	 std::cout << (*it).first << ": " << (*it).second << std::endl;
+      }
+   }
+
+   return 0;
 }
 //______________________________________________________________________________
 int He3TargetDetectorConstruction::GetPart(const char *partName,partParameters_t &data){
@@ -861,10 +940,10 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       ry              = std::atof( col[16].c_str() );  
       rz              = std::atof( col[17].c_str() );
       // convert to units
-      if( dataPt.len_unit.compare("mm")==0 ) LEN_UNIT = mm;
-      if( dataPt.len_unit.compare("cm")==0)  LEN_UNIT = cm; 
-      if( dataPt.len_unit.compare("m")==0)   LEN_UNIT = m; 
-      if( dataPt.len_unit.compare("in")==0)  LEN_UNIT = cm/2.54; 
+      if( dataPt.len_unit.compare("mm")==0 )  LEN_UNIT = mm;
+      if( dataPt.len_unit.compare("cm")==0)   LEN_UNIT = cm; 
+      if( dataPt.len_unit.compare("m")==0)    LEN_UNIT = m; 
+      if( dataPt.len_unit.compare("in")==0)   LEN_UNIT = 25.4*mm; 
       if( dataPt.ang_unit.compare("deg")==0 ) DEG_UNIT = deg;
       if( dataPt.ang_unit.compare("rad")==0)  DEG_UNIT = rad; 
       // store data 
