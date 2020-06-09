@@ -80,11 +80,16 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
     G4LogicalVolume*  fScoringVolume;
 
   private:
-   bool fDebug;
+   bool fDebug,fCheckOverlaps;
    std::vector<partParameters_t> fPartData;
    std::map<G4String,G4Material *> fMaterialsMap;  
 
-   G4Material *GetMaterial(G4String name); 
+   G4Material *GetMaterial(G4String name);
+   
+   void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
+
+   G4LogicalVolume *BuildGlassCell();
+   G4LogicalVolume *BuildEndWindow(const std::string type);
 
    int ConstructMaterials(); 
    int ReadData(const char *inpath);
