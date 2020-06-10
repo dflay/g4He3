@@ -546,12 +546,10 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const char axis,G4Logica
    sprintf(coilName_np,"phys_%s_n"  ,partName);  
    sprintf(coilName_pp,"phys_%s_p"  ,partName);  
 
-   partParameters_t cn;
+   partParameters_t cn,cp;
    GetPart(partName,cn); 
-
+   cp = cn;
    cn.name = coilName_n;  
-
-   partParameters_t cp = cn;
    cp.name = coilName_p;  
 
    // coil separation  
@@ -560,75 +558,70 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const char axis,G4Logica
    G4VisAttributes *visCoil = new G4VisAttributes();
    visCoil->SetForceWireframe();  
 
-   if(axis=='x'){
-      cn.x = -D/2.;
-      cp.x =  D/2.;
-      visCoil->SetColour( G4Colour::Red() ); 
-   }else if(axis=='y'){
-      cn.y = -D/2.;
-      cp.y =  D/2.;
-      visCoil->SetColour( G4Colour::Green() ); 
-   }else if(axis=='z'){
-      cn.z = -D/2.;
-      cp.z =  D/2.;
-      visCoil->SetColour( G4Colour::Blue() ); 
-   }
+   if(axis=='x') visCoil->SetColour( G4Colour::Red()   ); 
+   if(axis=='y') visCoil->SetColour( G4Colour::Green() ); 
+   if(axis=='z') visCoil->SetColour( G4Colour::Blue()  ); 
 
-   // additional rotation to match engineering drawings
-   G4double drx=0,dry=0,drz=0;   
-   // if(axis=='x') dry = 45.*deg; 
-   // if(axis=='y') drx = 45.*deg; 
-   // if(axis=='z') dry = 45.*deg; 
+   // additional rotation to match engineering drawings (A09016-03-08-0000) 
+   G4double drx=0,dry=0,drz=0;
+   if(axis=='x' || axis=='z') dry = -43.5; // x and z coils get rotated     
 
    G4Tubs *cnTube = new G4Tubs(cn.name,
                                cn.r_min,cn.r_max,
                                cn.length/2.,
                                cn.startPhi,cn.dPhi);
 
-   G4ThreeVector P_cn      = G4ThreeVector(cn.x,cn.y,cn.z); 
-   G4RotationMatrix *rm_cn = new G4RotationMatrix();
-   rm_cn->rotateX(cn.rx+drx);  
-   rm_cn->rotateY(cn.ry+dry);  
-   rm_cn->rotateZ(cn.rz+drz); 
- 
-   // logical volume 
-   G4LogicalVolume *cnLogic = new G4LogicalVolume(cnTube,GetMaterial("Aluminum"),coilName_nl);
-   cnLogic->SetVisAttributes(visCoil);  
-   
-   // placement of coil   
-   new G4PVPlacement(rm_cn,             // rotation
-	             P_cn,              // position 
-	             cnLogic,           // logical volume 
-	             coilName_np,       // name 
-	             logicMother,       // logical mother volume is the target chamber 
-	             false,             // no boolean operations 
-	             0,                 // copy number 
-	             fCheckOverlaps);   // check overlaps
-
    G4Tubs *cpTube = new G4Tubs(cp.name,
-                               cp.r_min,cn.r_max,
-                               cp.length/2.,
-                               cp.startPhi,cp.dPhi);
+	                       cp.r_min,cp.r_max,
+	                       cp.length/2.,
+	                       cp.startPhi,cp.dPhi);
 
-   G4ThreeVector P_cp      = G4ThreeVector(cp.x,cp.y,cp.z); 
-   G4RotationMatrix *rm_cp = new G4RotationMatrix();
-   rm_cp->rotateX(cp.rx+drx);  
-   rm_cp->rotateY(cp.ry+dry);  
-   rm_cp->rotateZ(cp.rz+drz);  
+   // approach 2: create a union of the coils
+   G4ThreeVector P      = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
+ 
+   G4UnionSolid *coils; 
+   coils = new G4UnionSolid("coils",cnTube,cpTube,0,P); // no rotation
 
-   // logical volume 
-   G4LogicalVolume *cpLogic = new G4LogicalVolume(cpTube,GetMaterial("Aluminum"),coilName_pl); 
-   cpLogic->SetVisAttributes(visCoil);  
-   
-   // placement of coil   
-   new G4PVPlacement(rm_cp,             // rotation
-	             P_cp,              // position 
-	             cpLogic,           // logical volume 
-	             coilName_pp,       // name 
-	             logicMother,       // logical mother volume is the target chamber 
-	             false,             // no boolean operations 
-	             0,                 // copy number 
-	             fCheckOverlaps);   // check overlaps
+   // now for the logical volume 
+   G4LogicalVolume *logicCoils = new G4LogicalVolume(coils,GetMaterial("Aluminum"),"logicCoils");
+   logicCoils->SetVisAttributes(visCoil);  
+
+   // place the volume according to the input parameters  
+   G4double x=0,y=0,z=0;
+
+   // depending on the axis, the offset is different because of rotations 
+   if(axis=='x'){
+      x = cn.x + D/2.;
+      y = cn.y; 
+      z = cn.z; 
+   }else if(axis=='y'){
+      x = cn.x;  
+      y = cn.y - D/2.;
+      z = cn.z; 
+   }else if(axis=='z'){
+      x = cn.x;  
+      y = cn.y;
+      z = cn.z - D/2.;
+   }
+
+   // FIXME: account for rotation about y
+   if(axis=='x') z += (D/2.)*cos(dry);
+   if(axis=='z') x += (D/2.)*sin(dry);  
+  
+   G4ThreeVector P_c    = G4ThreeVector(x,y,z);   
+   G4RotationMatrix *rm = new G4RotationMatrix();
+   rm->rotateX(cn.rx+drx); 
+   rm->rotateY(cn.ry+dry); 
+   rm->rotateZ(cn.rz+drz);
+
+   new G4PVPlacement(rm,               // rotation                                        
+                     P_c,              // position                                             
+                     logicCoils,       // logical volume                                      
+                     coilName_pp,      // name                                                  
+                     logicMother,      // logical mother volume is the target chamber          
+                     false,            // no boolean operations                        
+                     0,                // copy number                                   
+                     fCheckOverlaps);  // check overlaps                               
 
 }
 //______________________________________________________________________________
