@@ -562,9 +562,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const char axis,G4Logica
    if(axis=='y') visCoil->SetColour( G4Colour::Green() ); 
    if(axis=='z') visCoil->SetColour( G4Colour::Blue()  ); 
 
-   // additional rotation to match engineering drawings (A09016-03-08-0000) 
-   G4double drx=0,dry=0,drz=0;
-   if(axis=='x' || axis=='z') dry = -43.5; // x and z coils get rotated     
+
 
    G4Tubs *cnTube = new G4Tubs(cn.name,
                                cn.r_min,cn.r_max,
@@ -588,26 +586,31 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const char axis,G4Logica
 
    // place the volume according to the input parameters  
    G4double x=0,y=0,z=0;
+   y = cn.y;  
 
-   // depending on the axis, the offset is different because of rotations 
-   if(axis=='x'){
-      x = cn.x + D/2.;
-      y = cn.y; 
-      z = cn.z; 
+   // // additional rotation to match engineering drawings (A09016-03-08-0000) 
+   G4double drx=0,dry=0,drz=0;
+   if(axis=='x' || axis=='z') dry = 43.5*deg; // x and z coils get rotated     
+ 
+   // rotation about y 
+   // x' =  xcos + zsin 
+   // z' = -xsin + zcos
+ 
+   G4double ph = cn.ry + dry;  // total angular rotation!  
+   G4double COS = cos(ph); 
+   G4double SIN = sin(ph);
+
+   // adjust for y rotation.  FIXME: I don't like that this doesn't follow the rotated coordinates...  
+   if(axis=='x'){ 
+      x += (D/2)*fabs(COS); 
+      z += (D/2)*fabs(SIN);
    }else if(axis=='y'){
-      x = cn.x;  
-      y = cn.y - D/2.;
-      z = cn.z; 
+      y -= D/2.; 
    }else if(axis=='z'){
-      x = cn.x;  
-      y = cn.y;
-      z = cn.z - D/2.;
-   }
-
-   // FIXME: account for rotation about y
-   if(axis=='x') z += (D/2.)*cos(dry);
-   if(axis=='z') x += (D/2.)*sin(dry);  
-  
+      x += (D/2)*fabs(COS); 
+      z -= (D/2)*fabs(SIN);
+   } 
+ 
    G4ThreeVector P_c    = G4ThreeVector(x,y,z);   
    G4RotationMatrix *rm = new G4RotationMatrix();
    rm->rotateX(cn.rx+drx); 
