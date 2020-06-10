@@ -254,7 +254,12 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   new G4PVPlacement(rm_gc,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,fCheckOverlaps);       
 
   // cylinder of polarized 3He
-  BuildPolarizedHe3(logicGlassCell); 
+  BuildPolarizedHe3(logicGlassCell);
+
+  // helmholtz coils
+  BuildHelmholtzCoils('x',logicWorld);  
+  BuildHelmholtzCoils('y',logicWorld);  
+  BuildHelmholtzCoils('z',logicWorld);  
 
   // always return the physical World
   return physWorld;
@@ -502,9 +507,129 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildEndWindow(const std::string
 
    // create the logical volume
    G4String logicLabel = "logicEndWindow_" + suffix;  
-   G4LogicalVolume *logicEndWindow = new G4LogicalVolume(endWindow,GetMaterial("Cu"),logicLabel);
+   G4LogicalVolume *logicEndWindow = new G4LogicalVolume(endWindow,GetMaterial("Copper"),logicLabel);
 
    return logicEndWindow; 
+}
+//______________________________________________________________________________
+G4LogicalVolume *He3TargetDetectorConstruction::BuildEnclosure(){
+
+   return NULL;
+}
+//______________________________________________________________________________
+G4LogicalVolume *He3TargetDetectorConstruction::BuildSupportFrame(){
+   // support frame for polarization enclosure
+   // this comes close to the beam path
+
+     
+
+
+   return NULL;
+}
+//______________________________________________________________________________
+void He3TargetDetectorConstruction::BuildHelmholtzCoils(const char axis,G4LogicalVolume *logicMother){
+   // Helmholtz coils for B along axis (= x, y, or z) 
+   // - distance between coils D = 0.5(rmin+rmax), roughly the major radius of the tube   
+   // - coil 1 (placed at -D/2) 
+   // - coil 2 (placed at +D/2) 
+
+   char partName[12];
+   char coilName_n[200],coilName_p[200];   // shape name 
+   char coilName_nl[200],coilName_pl[200]; // logic name 
+   char coilName_np[200],coilName_pp[200]; // phys name 
+
+   sprintf(partName  ,"helmholtz_%c",axis);  
+   sprintf(coilName_n,"%s_n"        ,partName);  
+   sprintf(coilName_p,"%s_p"        ,partName);  
+   sprintf(coilName_nl,"logic_%s_n" ,partName);  
+   sprintf(coilName_pl,"logic_%s_p" ,partName);  
+   sprintf(coilName_np,"phys_%s_n"  ,partName);  
+   sprintf(coilName_pp,"phys_%s_p"  ,partName);  
+
+   partParameters_t cn;
+   GetPart(partName,cn); 
+
+   cn.name = coilName_n;  
+
+   partParameters_t cp = cn;
+   cp.name = coilName_p;  
+
+   // coil separation  
+   G4double D = 0.5*(cn.r_min + cn.r_max); 
+ 
+   G4VisAttributes *visCoil = new G4VisAttributes();
+   visCoil->SetForceWireframe();  
+
+   if(axis=='x'){
+      cn.x = -D/2.;
+      cp.x =  D/2.;
+      visCoil->SetColour( G4Colour::Red() ); 
+   }else if(axis=='y'){
+      cn.y = -D/2.;
+      cp.y =  D/2.;
+      visCoil->SetColour( G4Colour::Green() ); 
+   }else if(axis=='z'){
+      cn.z = -D/2.;
+      cp.z =  D/2.;
+      visCoil->SetColour( G4Colour::Blue() ); 
+   }
+
+   // additional rotation to match engineering drawings
+   G4double drx=0,dry=0,drz=0;   
+   // if(axis=='x') dry = 45.*deg; 
+   // if(axis=='y') drx = 45.*deg; 
+   // if(axis=='z') dry = 45.*deg; 
+
+   G4Tubs *cnTube = new G4Tubs(cn.name,
+                               cn.r_min,cn.r_max,
+                               cn.length/2.,
+                               cn.startPhi,cn.dPhi);
+
+   G4ThreeVector P_cn      = G4ThreeVector(cn.x,cn.y,cn.z); 
+   G4RotationMatrix *rm_cn = new G4RotationMatrix();
+   rm_cn->rotateX(cn.rx+drx);  
+   rm_cn->rotateY(cn.ry+dry);  
+   rm_cn->rotateZ(cn.rz+drz); 
+ 
+   // logical volume 
+   G4LogicalVolume *cnLogic = new G4LogicalVolume(cnTube,GetMaterial("Aluminum"),coilName_nl);
+   cnLogic->SetVisAttributes(visCoil);  
+   
+   // placement of coil   
+   new G4PVPlacement(rm_cn,             // rotation
+	             P_cn,              // position 
+	             cnLogic,           // logical volume 
+	             coilName_np,       // name 
+	             logicMother,       // logical mother volume is the target chamber 
+	             false,             // no boolean operations 
+	             0,                 // copy number 
+	             fCheckOverlaps);   // check overlaps
+
+   G4Tubs *cpTube = new G4Tubs(cp.name,
+                               cp.r_min,cn.r_max,
+                               cp.length/2.,
+                               cp.startPhi,cp.dPhi);
+
+   G4ThreeVector P_cp      = G4ThreeVector(cp.x,cp.y,cp.z); 
+   G4RotationMatrix *rm_cp = new G4RotationMatrix();
+   rm_cp->rotateX(cp.rx+drx);  
+   rm_cp->rotateY(cp.ry+dry);  
+   rm_cp->rotateZ(cp.rz+drz);  
+
+   // logical volume 
+   G4LogicalVolume *cpLogic = new G4LogicalVolume(cpTube,GetMaterial("Aluminum"),coilName_pl); 
+   cpLogic->SetVisAttributes(visCoil);  
+   
+   // placement of coil   
+   new G4PVPlacement(rm_cp,             // rotation
+	             P_cp,              // position 
+	             cpLogic,           // logical volume 
+	             coilName_pp,       // name 
+	             logicMother,       // logical mother volume is the target chamber 
+	             false,             // no boolean operations 
+	             0,                 // copy number 
+	             fCheckOverlaps);   // check overlaps
+
 }
 //______________________________________________________________________________
 G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
@@ -515,9 +640,9 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
    GetPart("pumpingChamber",pumpCh); 
 
    G4Sphere *pumpChamberShape = new G4Sphere(pumpCh.name,
-	 pumpCh.r_min     ,pumpCh.r_max,
-	 pumpCh.startPhi  ,pumpCh.dPhi, 
-	 pumpCh.startTheta,pumpCh.dTheta); 
+	                                     pumpCh.r_min     ,pumpCh.r_max,
+	                                     pumpCh.startPhi  ,pumpCh.dPhi, 
+	                                     pumpCh.startTheta,pumpCh.dTheta); 
 
    G4ThreeVector P_pc = G4ThreeVector(pumpCh.x,pumpCh.y,pumpCh.z); 
    G4RotationMatrix *rm_pc = new G4RotationMatrix();
@@ -532,9 +657,9 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
    GetPart("targetChamber",tgtCh); 
 
    G4Tubs *targetChamberShape = new G4Tubs(tgtCh.name,
-	 tgtCh.r_min    ,tgtCh.r_max,
-	 tgtCh.length/2.,
-	 tgtCh.startPhi ,tgtCh.dPhi); 
+	                                   tgtCh.r_min    ,tgtCh.r_max,
+	                                   tgtCh.length/2.,
+	                                   tgtCh.startPhi ,tgtCh.dPhi); 
 
    G4ThreeVector P_tc = G4ThreeVector(tgtCh.x,tgtCh.y,tgtCh.z); 
    G4RotationMatrix *rm_tc = new G4RotationMatrix();
@@ -855,8 +980,13 @@ int He3TargetDetectorConstruction::ConstructMaterials(){
    G4double cuRho = 8.96*g/cm3;  
    G4Material *Cu = new G4Material("Copper",cuRho,1.); 
    Cu->AddElement(elCu,1.);  
+   fMaterialsMap["Copper"] = Cu;
 
-   fMaterialsMap["Cu"] = Cu; 
+   // Al 
+   G4double alRho = 2.7*g/cm3;  
+   G4Material *Al = new G4Material("Aluminum",alRho,1.); 
+   Al->AddElement(elAl,1.); 
+   fMaterialsMap["Aluminum"] = Al;  
 
    // GE180   
    G4double bigden = 1e9*g/cm3; // why so big? To make these materials not weigh as much in the physics?  
@@ -902,6 +1032,10 @@ int He3TargetDetectorConstruction::ConstructMaterials(){
    G4Material *pol3He = new G4Material("pol3He", gasden, 1 );
    pol3He->AddElement(el3He, 1);
    fMaterialsMap["He3"] = pol3He;  
+
+   // for the support materials 
+   G4Material *Steel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
+   fMaterialsMap["Stainless_Steel"] = Steel; 
 
    // print for confirmation
    if(fDebug){
