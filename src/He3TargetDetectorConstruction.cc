@@ -176,12 +176,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   partParameters_t mshu;
   GetPart("ew_mainShaft_up",mshu); 
 
+  G4VisAttributes *visCu = new G4VisAttributes();
+  visCu->SetColour( G4Colour::Red() ); 
+  visCu->SetForceWireframe(true);
+
   // create the logical volume 
   G4LogicalVolume *logicCuEndWindow_up = BuildEndWindow("upstream"); 
 
-  G4VisAttributes *visCu = new G4VisAttributes();
-  visCu->SetColour( G4Colour::Red() );
-  visCu->SetForceWireframe(true);
   logicCuEndWindow_up->SetVisAttributes(visCu); 
 
   // place it at the end of the target chamber 
@@ -260,6 +261,20 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildHelmholtzCoils("maj",logicWorld);  
   BuildHelmholtzCoils("rfy",logicWorld);  
   BuildHelmholtzCoils("min",logicWorld); 
+
+  // // some torus 
+  // G4Torus *myTorus = new G4Torus("myTorus",1.0*cm,2.0*cm,5.0*cm,0.*deg,90.*deg);
+
+  // G4LogicalVolume *myTorus_log = new G4LogicalVolume(myTorus,GetMaterial("GE180"),"myTorus_log"); 
+
+  // new G4PVPlacement(0,
+  //                   G4ThreeVector(0,0,0),
+  //                   myTorus_log,
+  //                   "myTorus_phys",
+  //                   logicWorld,
+  //                   false,
+  //                   0,
+  //                   fCheckOverlaps);
 
   // shield 
   BuildShield(logicWorld);  
@@ -630,6 +645,9 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
    // - distance between coils D = 0.5(rmin+rmax), roughly the major radius of the tube   
    // - coil 1 (placed at -D/2) 
    // - coil 2 (placed at +D/2)
+   // TODO: Turn all of these into toruses!
+   //       - shell with appropriate r_min,r_max
+   //       - core with r_min = 0, r_tor = central radius of shell  
 
    char partName[14];
    char coilName_n[200],coilName_p[200];   // shape name 
@@ -762,8 +780,8 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
 
    // copper coil -- goes *inside* the shell  
    G4VisAttributes *visCoil = new G4VisAttributes();
-   visCoil->SetForceWireframe();  
-   visCoil->SetColour( G4Colour::Brown() ); 
+   // visCoil->SetForceWireframe(true);  
+   visCoil->SetColour( G4Colour(255,140,0) );  // dark orange 
 
    G4Tubs *cnTube = new G4Tubs(cn.name,
                                cn.r_min,cn.r_max,
@@ -872,8 +890,8 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
    GetPart("transTubeEl_dn",tted); 
 
    G4Torus *transTubeElDnShape = new G4Torus(tted.name,
-	 tted.r_min     ,tted.r_max,tted.r_tor,
-	 tted.startPhi  ,tted.dPhi); 
+	                                     tted.r_min   ,tted.r_max,tted.r_tor,
+	                                     tted.startPhi,tted.dPhi); 
 
    G4ThreeVector P_tted = G4ThreeVector(tted.x,tted.y,tted.z); 
    G4RotationMatrix *rm_tted = new G4RotationMatrix();
