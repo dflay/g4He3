@@ -259,21 +259,20 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // helmholtz coils
   BuildHelmholtzCoils("maj",logicWorld);  
   BuildHelmholtzCoils("rfy",logicWorld);  
-  BuildHelmholtzCoils("min",logicWorld);  
+  BuildHelmholtzCoils("min",logicWorld); 
+
+  // shield 
+  BuildShield(logicWorld);  
 
   // always return the physical World
   return physWorld;
 }
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMother){
-  // build the polarized 3He logical volume and place it in the logicMother  
+  // build the polarized 3He logical volume and place it in the logicMother 
+  // TODO: Check volume overlap with glass cell  
 
-  //---- 3He target chamber
-  // need glass target chamber dimensions for this 
-  // - target chamber 
-  // - endcap IDs (main shaft, lip, rlip, hemisphere) 
-
-  //---- target chamber  
+  //---- target chamber component  
   partParameters_t tc; 
   GetPart("targetChamber",tc); 
   tc.r_max = tc.r_min; 
@@ -287,7 +286,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   // end window (upstream)
   // combine info from lip, rlip, end cap to one object here
   // try to make this a simple union of a cylinder and a hemisphere.  
-  // may need something more involved later... 
+  // TODO: may need something more involved later... 
 
   // build the "base" -- combines end window main shaft + lip   
   partParameters_t mshu;
@@ -512,16 +511,115 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildEndWindow(const std::string
    return logicEndWindow; 
 }
 //______________________________________________________________________________
-G4LogicalVolume *He3TargetDetectorConstruction::BuildEnclosure(){
+void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
+   // shield box for the target magnetic field 
+   // - material: 1018 hot-rolled steel
+   // - the shield is actually two layers
+   //   - each layer is 0.25" thick
+   //   - outer surfaces of layers separated by 1.29" 
+   //     => 1.29/2 - 0.25 = 0.395" center-to-center distance 
+   // - Layer 1 = outside layer, Layer 2 = inside layer  
+   
+   G4double gap = 1.00*cm; // 0.395" center-to-center distance 
 
-   return NULL;
+   //---- shield door upstream 
+   partParameters_t sdu1;  
+   GetPart("shield_door_up",sdu1);
+   partParameters_t sdu2 = sdu1; 
+
+   sdu1.z -= gap/2.; 
+   sdu2.z += gap/2.; 
+
+   // layer 1
+   // std::cout << "BOX SIZE = " << sdu1.x_len << "," << sdu1.y_len << "," << sdu1.z_len << std::endl; 
+
+   G4Box *shieldDoor_up1     = new G4Box("sdu1",sdu1.x_len/2.,sdu1.y_len/2.,sdu1.z_len/2.);
+
+   G4ThreeVector P_sdu1      = G4ThreeVector(sdu1.x,sdu1.y,sdu1.z);  
+   G4RotationMatrix *rm_sdu1 = new G4RotationMatrix(); 
+   rm_sdu1->rotateX(sdu1.rx);   
+   rm_sdu1->rotateY(sdu1.ry);   
+   rm_sdu1->rotateZ(sdu1.rz);   
+
+   // layer 2 
+   G4Box *shieldDoor_up2     = new G4Box("sdu2",sdu2.x_len/2.,sdu2.y_len/2.,sdu2.z_len/2.);
+
+   G4ThreeVector P_sdu2      = G4ThreeVector(sdu2.x,sdu2.y,sdu2.z);  
+   G4RotationMatrix *rm_sdu2 = new G4RotationMatrix(); 
+   rm_sdu2->rotateX(sdu2.rx);   
+   rm_sdu2->rotateY(sdu2.ry);   
+   rm_sdu2->rotateZ(sdu2.rz);   
+   
+   //---- shield pane upstream  
+   partParameters_t spu1;  
+   GetPart("shield_pane_up",spu1);
+   partParameters_t spu2 = spu1; 
+
+   // note the sign inversion here! 
+   spu1.z += gap/2.; 
+   spu2.z -= gap/2.; 
+
+   // layer 1
+   G4Box *shieldPane_up1     = new G4Box("spu1",spu1.x_len/2.,spu1.y_len/2.,spu1.z_len/2.);
+
+   G4ThreeVector P_spu1      = G4ThreeVector(spu1.x,spu1.y,spu1.z);  
+   G4RotationMatrix *rm_spu1 = new G4RotationMatrix(); 
+   rm_spu1->rotateX(spu1.rx);   
+   rm_spu1->rotateY(spu1.ry);   
+   rm_spu1->rotateZ(spu1.rz);   
+
+   // layer 2 
+   G4Box *shieldPane_up2     = new G4Box("spu2",spu2.x_len/2.,spu2.y_len/2.,spu2.z_len/2.);
+
+   G4ThreeVector P_spu2      = G4ThreeVector(spu2.x,spu2.y,spu2.z);  
+   G4RotationMatrix *rm_spu2 = new G4RotationMatrix(); 
+   rm_spu2->rotateX(spu2.rx);   
+   rm_spu2->rotateY(spu2.ry);   
+   rm_spu2->rotateZ(spu2.rz);  
+
+   // collect into single object
+   G4RotationMatrix *rm0 = new G4RotationMatrix(); 
+   rm0->rotateX(0); 
+   rm0->rotateY(0); 
+   rm0->rotateZ(0); 
+ 
+   G4UnionSolid *enclosure; 
+   G4ThreeVector P_du      = G4ThreeVector(0,0,gap);                              // offset is the gap 
+   enclosure = new G4UnionSolid("sdu",shieldDoor_up1,shieldDoor_up2,0,P_du);      // relative to door
+   G4ThreeVector P_pu1     = G4ThreeVector(spu1.x_len/2.,0,0);                   // relative to door  
+   enclosure = new G4UnionSolid("sdu_p1",enclosure,shieldPane_up1,0,P_pu1);       // relative to door
+   G4ThreeVector P_pu2     = G4ThreeVector(spu2.x_len/2.,0,gap);                 // relative to door 
+   enclosure = new G4UnionSolid("sdu_pu",enclosure,shieldPane_up2,0,P_pu2);       // relative to door
+
+   // visualization 
+   G4VisAttributes *vis = new G4VisAttributes();
+   vis->SetForceWireframe();
+   vis->SetColour( G4Colour::Magenta() ); 
+
+   // logical volume 
+   G4LogicalVolume *logicEnclosure = new G4LogicalVolume(enclosure,GetMaterial("Stainless_Steel"),"logicEnclosure");
+   logicEnclosure->SetVisAttributes(vis);  
+  
+   // place it
+   G4double x_up = 0; 
+   G4double y_up = 0; 
+   G4double z_up = spu1.z-gap/2.;
+   // std::cout << "Enclosure coordinates (x,y,z) = (" << x_up << "," << y_up << "," << z_up << ")" << std::endl;  
+   G4ThreeVector P_up = G4ThreeVector(x_up,y_up,z_up); // offset so it's barely touching 
+   new G4PVPlacement(0,                   // rotation [relative to mother]    
+                     P_up,                // position [relative to mother] 
+                     logicEnclosure,      // logical volume    
+                     "physEnclosure",     // name                          
+                     logicMother,         // logical mother volume            
+                     false,               // no boolean operations          
+                     0,                   // copy number                   
+                     fCheckOverlaps);     // check overlaps                
 }
 //______________________________________________________________________________
-G4LogicalVolume *He3TargetDetectorConstruction::BuildSupportFrame(){
+void He3TargetDetectorConstruction::BuildSupportFrame(){
    // support frame for polarization enclosure
    // this comes close to the beam path
-
-   return NULL;
+   
 }
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G4LogicalVolume *logicMother){
@@ -531,7 +629,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
    //          rfy = RF coil pair, aligned along the vertical (y) axis  
    // - distance between coils D = 0.5(rmin+rmax), roughly the major radius of the tube   
    // - coil 1 (placed at -D/2) 
-   // - coil 2 (placed at +D/2) 
+   // - coil 2 (placed at +D/2)
 
    char partName[14];
    char coilName_n[200],coilName_p[200];   // shape name 
@@ -737,7 +835,6 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
    rm_tc->rotateZ(tgtCh.rz); 
 
    // //---- end window on target chamber, downstream ----  
-   // // FIXME: What is the correct material?  Using GE180 for now  
 
    // partParameters_t ewDn;
    // GetPart("endWindow_dn",ewDn); 
@@ -754,7 +851,6 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
    // rm_ewd->rotateZ(ewDn.rz); 
 
    // //---- end window on target chamber, upstream ----  
-   // // FIXME: What is the correct material?  Using GE180 for now  
 
    // partParameters_t ewUp;
    // GetPart("endWindow_up",ewUp); 
@@ -1169,7 +1265,7 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
 
    if( infile.fail() ){
       G4cout << "[He3TargetDetectorConstruction::ReadData]: Cannot open the file: " << inpath << G4endl;
-      return 1;
+      exit(1);
    }else{
       G4cout << "[He3TargetDetectorConstruction::ReadData]: Opened the file: " << inpath << G4endl;
       while( !infile.eof() ){
@@ -1186,6 +1282,7 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
 
    partParameters_t dataPt; 
    double r_min=0,r_max=0,r_tor=0;
+   double x_len=0,y_len=0,z_len=0;
    double length=0,startTheta=0,dTheta=0,startPhi=0,dPhi=0;
    double x=0,y=0,z=0,rx=0,ry=0,rz=0;
    double LEN_UNIT=1.;
@@ -1195,10 +1292,10 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
    int rc=0;
    for(int i=0;i<NROW;i++){
       // split the row into a vector which represents the columns 
-      rc   = SplitString(',',row[i],col);
+      rc = SplitString(',',row[i],col);
       if(rc!=0){
          G4cout << "[He3TargetDetectorConstruction::ReadData]: Cannot parse string " << row[i] << G4endl;
-	 return 1;
+	 exit(1);
       }
       // fill the data vector
       dataPt.name     = col[0];  
@@ -1208,17 +1305,20 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       r_tor           = std::atof( col[4].c_str()  );  
       r_min           = std::atof( col[5].c_str()  );  
       r_max           = std::atof( col[6].c_str()  );  
-      length          = std::atof( col[7].c_str()  );  
-      startTheta      = std::atof( col[8].c_str()  );  
-      dTheta          = std::atof( col[9].c_str()  );  
-      startPhi        = std::atof( col[10].c_str() );  
-      dPhi            = std::atof( col[11].c_str() );  
-      x               = std::atof( col[12].c_str() );  
-      y               = std::atof( col[13].c_str() );  
-      z               = std::atof( col[14].c_str() );  
-      rx              = std::atof( col[15].c_str() );  
-      ry              = std::atof( col[16].c_str() );  
-      rz              = std::atof( col[17].c_str() );
+      length          = std::atof( col[7].c_str()  ); 
+      x_len           = std::atof( col[8].c_str()  );  
+      y_len           = std::atof( col[9].c_str()  );  
+      z_len           = std::atof( col[10].c_str() );  
+      startTheta      = std::atof( col[11].c_str() );  
+      dTheta          = std::atof( col[12].c_str() );  
+      startPhi        = std::atof( col[13].c_str() );  
+      dPhi            = std::atof( col[14].c_str() );  
+      x               = std::atof( col[15].c_str() );  
+      y               = std::atof( col[16].c_str() );  
+      z               = std::atof( col[17].c_str() );  
+      rx              = std::atof( col[18].c_str() );  
+      ry              = std::atof( col[19].c_str() );  
+      rz              = std::atof( col[20].c_str() );
       // convert to units
       if( dataPt.len_unit.compare("mm")==0 )  LEN_UNIT = mm;
       if( dataPt.len_unit.compare("cm")==0)   LEN_UNIT = cm; 
@@ -1230,7 +1330,10 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       dataPt.r_tor      = LEN_UNIT*r_tor;  
       dataPt.r_min      = LEN_UNIT*r_min;  
       dataPt.r_max      = LEN_UNIT*r_max;  
-      dataPt.length     = LEN_UNIT*length;  
+      dataPt.length     = LEN_UNIT*length; 
+      dataPt.x_len      = LEN_UNIT*x_len;  
+      dataPt.y_len      = LEN_UNIT*y_len;  
+      dataPt.z_len      = LEN_UNIT*z_len;  
       dataPt.startTheta = DEG_UNIT*startTheta;  
       dataPt.dTheta     = DEG_UNIT*dTheta;  
       dataPt.startPhi   = DEG_UNIT*startPhi;  
