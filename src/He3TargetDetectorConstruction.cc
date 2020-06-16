@@ -169,74 +169,14 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // - main shaft [tube] 
   // - lip [tube]  
   // - rounded lip [hemisphere/tube] 
-  // - endcap [hemisphere]  
+  // - endcap [hemisphere] 
+ 
+  BuildEndWindow("upstream"  ,logicWorld); 
+  BuildEndWindow("downstream",logicWorld); 
 
-  // upstream
-  // grab main shaft part parameters so we know where to place the object  
-  partParameters_t mshu;
-  GetPart("ew_mainShaft_up",mshu); 
-
-  G4VisAttributes *visCu = new G4VisAttributes();
-  visCu->SetColour( G4Colour::Red() ); 
-  visCu->SetForceWireframe(true);
-
-  // create the logical volume 
-  G4LogicalVolume *logicCuEndWindow_up = BuildEndWindow("upstream"); 
-
-  logicCuEndWindow_up->SetVisAttributes(visCu); 
-
-  // place it at the end of the target chamber 
-  partParameters_t myTC; 
-  GetPart("targetChamber",myTC); 
-  G4double x_cewu = 0.*cm; 
-  G4double y_cewu = 0.*cm;   
-  G4double z_cewu = (-1.)*(myTC.length/2. + 0.5*mshu.length);  // this will make the large lip flush with the glass
-  
-  G4ThreeVector P_cewu = G4ThreeVector(x_cewu,y_cewu,z_cewu); // test location  
-  G4RotationMatrix *rm_cewu = new G4RotationMatrix(); 
-  rm_cewu->rotateX(0.*deg); 
-  rm_cewu->rotateY(180.*deg); 
-  rm_cewu->rotateZ(0.*deg);
-
-  new G4PVPlacement(rm_cewu,
-                    P_cewu, 
-                    logicCuEndWindow_up,   // logical volume 
-                    "physCuEndWindow_up",  // name 
-                    logicWorld,            // logical mother volume is the target chamber 
-                    false,                 // no boolean operations 
-                    0,                     // copy number 
-                    fCheckOverlaps);        // check overlaps
-
-  // downstream 
-  // grab main shaft part parameters so we know where to place the object  
-  partParameters_t mshd;
-  GetPart("ew_mainShaft_dn",mshd); 
-
-  // create the logical volume 
-  G4LogicalVolume *logicCuEndWindow_dn = BuildEndWindow("downstream"); 
-  logicCuEndWindow_dn->SetVisAttributes(visCu); 
-
-  // place it at the end of the target chamber 
-  G4double x_cewd = 0.*cm; 
-  G4double y_cewd = 0.*cm;   
-  G4double z_cewd = myTC.length/2. + 0.5*mshd.length;  // this will make the large lip flush with the glass
-  
-  G4ThreeVector P_cewd = G4ThreeVector(x_cewd,y_cewd,z_cewd); // test location  
-  G4RotationMatrix *rm_cewd = new G4RotationMatrix(); 
-  rm_cewd->rotateX(0.*deg); 
-  rm_cewd->rotateY(0.*deg); 
-  rm_cewd->rotateZ(0.*deg);
-
-  new G4PVPlacement(rm_cewd,
-                    P_cewd, 
-                    logicCuEndWindow_dn,   // logical volume 
-                    "physCuEndWindow_dn",  // name 
-                    logicWorld,            // logical mother volume is the target chamber 
-                    false,                 // no boolean operations 
-                    0,                     // copy number 
-                    fCheckOverlaps);        // check overlaps
-
-  //---- glass cell ----  
+  //---- glass cell ---- 
+  // we return the logical volume since we want to place the 3He inside of it.  
+  // could consider building the 3He material inside the BuildGlassCell function  
   G4LogicalVolume *logicGlassCell = BuildGlassCell();
 
   G4VisAttributes *visGC = new G4VisAttributes(); 
@@ -244,8 +184,11 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   visGC->SetForceWireframe(true);  
   logicGlassCell->SetVisAttributes(visGC); 
 
-  // place the volume. note that this is relative to the *target chamber* 
-  // as that is the first object in the union 
+  // place the volume
+  // - note that this is relative to the *target chamber* as that is the first object in the union 
+  // - rotation puts the cell oriented such that the pumping chamber is vertically above
+  //   and the beam enters from the side where the small sphere on the transfer tube is 
+  //   closest to the upstream side 
   G4ThreeVector P_tgt_o = G4ThreeVector(0.*cm,0.*cm,0.*cm);   
   G4RotationMatrix *rm_gc = new G4RotationMatrix(); 
   rm_gc->rotateX(0.*deg);  
@@ -261,20 +204,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildHelmholtzCoils("maj",logicWorld);  
   BuildHelmholtzCoils("rfy",logicWorld);  
   BuildHelmholtzCoils("min",logicWorld); 
-
-  // // some torus 
-  // G4Torus *myTorus = new G4Torus("myTorus",1.0*cm,2.0*cm,5.0*cm,0.*deg,90.*deg);
-
-  // G4LogicalVolume *myTorus_log = new G4LogicalVolume(myTorus,GetMaterial("GE180"),"myTorus_log"); 
-
-  // new G4PVPlacement(0,
-  //                   G4ThreeVector(0,0,0),
-  //                   myTorus_log,
-  //                   "myTorus_phys",
-  //                   logicWorld,
-  //                   false,
-  //                   0,
-  //                   fCheckOverlaps);
 
   // shield 
   BuildShield(logicWorld);  
@@ -428,7 +357,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
 
 }
 //______________________________________________________________________________
-G4LogicalVolume *He3TargetDetectorConstruction::BuildEndWindow(const std::string type){
+void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4LogicalVolume *logicMother){
    // build the metal end window based on type = upstream or downstream 
 
    std::string suffix; 
@@ -439,7 +368,6 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildEndWindow(const std::string
    }else{
       std::cout << "[He3TargetDetectorConstruction::BuildEndWindow]: ERROR! Invalid type = " << type << std::endl;
       exit(1);
-      return NULL;
    }  
 
    std::string ms_str = "ew_mainShaft_" + suffix; 
@@ -523,7 +451,44 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildEndWindow(const std::string
    G4String logicLabel = "logicEndWindow_" + suffix;  
    G4LogicalVolume *logicEndWindow = new G4LogicalVolume(endWindow,GetMaterial("Copper"),logicLabel);
 
-   return logicEndWindow; 
+   // visualization
+   G4VisAttributes *vis = new G4VisAttributes();
+   vis->SetColour( G4Colour::Red() ); 
+   vis->SetForceWireframe(true);
+
+   logicEndWindow->SetVisAttributes(vis); 
+
+   // place it at the end of the target chamber 
+   partParameters_t tc; 
+   GetPart("targetChamber",tc); 
+   G4double x_ew = 0.*cm; 
+   G4double y_ew = 0.*cm;   
+   G4double z_ew = (tc.length/2. + 0.5*msh.length);  // this will make the large lip flush with the glass
+   G4double ra[3] = {0.*deg,0.*deg,0.*deg}; 
+
+   // adjustments for upstream part 
+   if( type.compare("upstream")==0 ){
+      z_ew *= -1.;
+      ra[1] = 180.*deg;  
+   }
+
+   G4ThreeVector P_ew = G4ThreeVector(x_ew,y_ew,z_ew); // location  
+   G4RotationMatrix *rm_ew = new G4RotationMatrix(); 
+   rm_ew->rotateX(ra[0]); 
+   rm_ew->rotateY(ra[1]); 
+   rm_ew->rotateZ(ra[2]);
+   
+   G4String physLabel = "physCuEndWindow_" + suffix;  
+
+   new G4PVPlacement(rm_ew,
+	             P_ew, 
+	             logicEndWindow,      // logical volume 
+	             physLabel,           // name 
+	             logicMother,         // logical mother volume is the target chamber 
+	             false,               // no boolean operations 
+	             0,                   // copy number 
+	             fCheckOverlaps);     // check overlaps
+ 
 }
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
@@ -681,40 +646,76 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
    cp.name = coilName_p;  
 
    // coil parameters   
-   G4double D      = 0.5*(cn.r_min + cn.r_max);          // helmholtz separation D = R = 0.5(rmin + rmax) 
+   // G4double D      = 0.5*(cn.r_min + cn.r_max);          // helmholtz separation D = R = 0.5(rmin + rmax) 
+   G4double D      = cn.r_tor;          // helmholtz separation D = R = 0.5(rmin + rmax) 
    G4double shWall = 0;  
 
    if( type.compare("maj")==0 ) shWall = 5.0*mm;         // TODO: Estimates for now! 
    if( type.compare("min")==0 ) shWall = 5.0*mm;         // TODO: Estimates for now! 
    if( type.compare("rfy")==0 ) shWall = 0.030*25.4*mm; 
 
+   // cylindrical geometry 
    // create the shell first 
+//    partParameters_t cns;
+//    cns.name     = shellName_n; 
+//    cns.r_min    = cn.r_min - shWall;  
+//    cns.r_max    = cn.r_max + shWall; 
+//    cns.length   = cn.length;
+//    cns.startPhi = 0.*deg;
+//    cns.dPhi     = 360.*deg;   
+//  
+//    G4Tubs *cnsTube = new G4Tubs(cns.name,
+//                                 cns.r_min    ,cns.r_max,
+//                                 cns.length/2.,
+//                                 cns.startPhi ,cns.dPhi);
+// 
+//    partParameters_t cps;
+//    cps.name     = shellName_p; 
+//    cps.r_min    = cp.r_min - shWall;  
+//    cps.r_max    = cp.r_max + shWall; 
+//    cps.length   = cp.length;
+//    cps.startPhi = 0.*deg;
+//    cps.dPhi     = 360.*deg;   
+// 
+//    G4Tubs *cpsTube = new G4Tubs(cps.name,
+// 	                        cps.r_min    ,cps.r_max,
+// 	                        cps.length/2.,
+// 	                        cps.startPhi ,cps.dPhi);
 
+   // torus geometry
+   // - some adjustments here: we should make the *thickness* of the core 
+   //   equal to the thickness specified in the drawings. 
+   //   this is better than the estimate of the derived r_max of the torus centered on 
+   //   the radius of curvature  
+   cn.r_max = cn.length/2.;    
+   cp.r_max = cp.length/2.;    
+
+   // create the shell first 
    partParameters_t cns;
    cns.name     = shellName_n; 
-   cns.r_min    = cn.r_min - shWall;  
-   cns.r_max    = cn.r_max + shWall; 
+   cns.r_min    = cn.r_max;  
+   cns.r_max    = cn.r_max + shWall;
+   cns.r_tor    = cn.r_tor;  
    cns.length   = cn.length;
    cns.startPhi = 0.*deg;
    cns.dPhi     = 360.*deg;   
  
-   G4Tubs *cnsTube = new G4Tubs(cns.name,
-                                cns.r_min    ,cns.r_max,
-                                cns.length/2.,
-                                cns.startPhi ,cns.dPhi);
+   G4Torus *cnsTube = new G4Torus(cns.name,
+                                  cns.r_min   ,cns.r_max,cns.r_tor,
+                                  cns.startPhi,cns.dPhi);
 
    partParameters_t cps;
    cps.name     = shellName_p; 
-   cps.r_min    = cp.r_min - shWall;  
-   cps.r_max    = cp.r_max + shWall; 
+   cps.r_min    = cp.r_max;  
+   cps.r_max    = cp.r_max + shWall;
+   cps.r_tor    = cp.r_tor;  
    cps.length   = cp.length;
    cps.startPhi = 0.*deg;
    cps.dPhi     = 360.*deg;   
 
-   G4Tubs *cpsTube = new G4Tubs(cps.name,
-	                        cps.r_min    ,cps.r_max,
-	                        cps.length/2.,
-	                        cps.startPhi ,cps.dPhi);
+   G4Torus *cpsTube = new G4Torus(cps.name,
+	                          cps.r_min   ,cps.r_max,cps.r_tor,
+	                          cps.startPhi,cps.dPhi);
 
    // create a union of the coils
    G4ThreeVector Ps = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
@@ -780,18 +781,27 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
 
    // copper coil -- goes *inside* the shell  
    G4VisAttributes *visCoil = new G4VisAttributes();
-   // visCoil->SetForceWireframe(true);  
    visCoil->SetColour( G4Colour(255,140,0) );  // dark orange 
 
-   G4Tubs *cnTube = new G4Tubs(cn.name,
-                               cn.r_min,cn.r_max,
-                               cn.length/2.,
-                               cn.startPhi,cn.dPhi);
+   // cylindrical geometry 
+//    G4Tubs *cnTube = new G4Tubs(cn.name,
+//                                cn.r_min,cn.r_max,
+//                                cn.length/2.,
+//                                cn.startPhi,cn.dPhi);
+// 
+//    G4Tubs *cpTube = new G4Tubs(cp.name,
+// 	                       cp.r_min,cp.r_max,
+// 	                       cp.length/2.,
+// 	                       cp.startPhi,cp.dPhi);
+ 
+   // torus geometry  
+   G4Torus *cnTube = new G4Torus(cn.name,
+                                 cn.r_min   ,cn.r_max,cn.r_tor,
+                                 cn.startPhi,cn.dPhi);
 
-   G4Tubs *cpTube = new G4Tubs(cp.name,
-	                       cp.r_min,cp.r_max,
-	                       cp.length/2.,
-	                       cp.startPhi,cp.dPhi);
+   G4Torus *cpTube = new G4Torus(cp.name,
+	                         cp.r_min   ,cp.r_max,cp.r_tor,
+	                         cp.startPhi,cp.dPhi);
 
    // create a union of the coils
    G4ThreeVector P      = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
