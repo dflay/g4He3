@@ -503,25 +503,23 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    G4double gap = 1.00*cm; // 0.395" center-to-center distance 
 
    // offset is somewhat arbitrary, choosing to center the entire enclosure based on its full extended length 
-   G4double delta_x = 24.19*25.4*mm;  // offset of whole enclosure in x direction  
-   G4double delta_y = 0*mm;           // offset of whole enclosure in y direction  
-   G4double delta_z = 0.;             // offset of whole enclosure in z direction  
+   G4double delta_x = 51.21*cm; // 24.19*25.4*mm - 9.5*cm;    // offset of whole enclosure in x direction  
+   G4double delta_y = 0.*mm;                     // offset of whole enclosure in y direction  
+   G4double delta_z = 0.*mm;                     // offset of whole enclosure in z direction 
+   G4double dry     = 43.5*deg;                      // rotation angle of whole unit about y axis 
+
+   bool addDoor = false;                         // add door to assembly   
 
    //---- shield door upstream 
    partParameters_t sdu1;  
    GetPart("shield_door_up",sdu1);
    partParameters_t sdu2 = sdu1; 
-  
-   // finish definition of structure offset 
-   delta_z = sdu1.z;  
 
    // set up for centering device on the midpoint between the panels 
    sdu1.z -= gap/2.; 
    sdu2.z += gap/2.;
 
    // layer 1
-   // std::cout << "BOX SIZE = " << sdu1.x_len << "," << sdu1.y_len << "," << sdu1.z_len << std::endl; 
-
    G4Box *shieldDoor_up1     = new G4Box("sdu1",sdu1.x_len/2.,sdu1.y_len/2.,sdu1.z_len/2.);
 
    G4ThreeVector P_sdu1      = G4ThreeVector(sdu1.x,sdu1.y,sdu1.z);  
@@ -543,6 +541,9 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    partParameters_t spu1;  
    GetPart("shield_pane_up",spu1);
    partParameters_t spu2 = spu1; 
+
+   // finish definition of structure offset 
+   delta_z = spu1.z;  
 
    // note the sign inversion here! 
    spu1.z += gap/2.; 
@@ -576,7 +577,7 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
  
    // apply offset for placement 
    spx1.x -= delta_x; 
-   spx2.x -= delta_x; 
+   spx2.x -= delta_x;
 
    // layer 1
    G4Box *shieldPane_x1      = new G4Box("spx1",spx1.x_len/2.,spx1.y_len/2.,spx1.z_len/2.);
@@ -598,23 +599,21 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
 
    // collect into single object
    G4RotationMatrix *rm0 = new G4RotationMatrix(); 
-   rm0->rotateX(0); 
-   rm0->rotateY(0); 
-   rm0->rotateZ(0); 
+   rm0->rotateX(0); rm0->rotateY(0); rm0->rotateZ(0); 
  
    G4UnionSolid *enclosure; 
    // [upstream] pane inner and outer  
    G4ThreeVector P_pu2     = G4ThreeVector(0.,0,gap);                              // relative to pane 1  
    enclosure = new G4UnionSolid("su_p12",shieldPane_up1,shieldPane_up2,0,P_pu2);  
    // [upstream] door, inner panel 
-   G4ThreeVector P_du1     = G4ThreeVector(-(sdu1.x_len/2.+spu1.x_len/2.),0,0);    
-   enclosure = new G4UnionSolid("su_p12_d1",enclosure,shieldDoor_up1,0,P_du1);   
+   G4ThreeVector P_du1 = G4ThreeVector(-(sdu1.x_len/2.+spu1.x_len/2.),0,0);    
+   if(addDoor) enclosure = new G4UnionSolid("su_p12_d1",enclosure,shieldDoor_up1,0,P_du1);   
    // [upstream] door, outer panel   
-   G4ThreeVector P_du2     = G4ThreeVector(-(sdu1.x_len/2.+spu1.x_len/2.),0,gap);   
-   enclosure = new G4UnionSolid("su_p12_d12",enclosure,shieldDoor_up2,0,P_du2);   
+   G4ThreeVector P_du2 = G4ThreeVector(-(sdu1.x_len/2.+spu1.x_len/2.),0,gap);   
+   if(addDoor) enclosure = new G4UnionSolid("su_p12_d12",enclosure,shieldDoor_up2,0,P_du2);   
    // [along x] pane 
-   enclosure = new G4UnionSolid("su_p12_d12_x1" ,enclosure,shieldPane_x1,rm_spx1,P_spx1);   
-   enclosure = new G4UnionSolid("su_p12_d12_x12",enclosure,shieldPane_x2,rm_spx2,P_spx2);   
+   enclosure = new G4UnionSolid("su_p12_d12_x1",enclosure,shieldPane_x1,rm_spx1,P_spx1);   
+   enclosure = new G4UnionSolid("shield_half"  ,enclosure,shieldPane_x2,rm_spx2,P_spx2);   
 
    // visualization 
    G4VisAttributes *vis = new G4VisAttributes();
@@ -624,21 +623,57 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // logical volume 
    G4LogicalVolume *logicEnclosure = new G4LogicalVolume(enclosure,GetMaterial("Stainless_Steel"),"logicEnclosure");
    logicEnclosure->SetVisAttributes(vis);  
-  
+
+   // adjust for y rotation.  
+   // FIXME: I don't like that this doesn't follow the rotated coordinates...
+   G4double COS     = cos(90.*deg+dry); 
+   G4double SIN     = sin(90.*deg+dry);
+   G4double TH_TOT  = 180.*deg + dry; 
+   G4double COS_TOT = cos(TH_TOT); 
+   G4double SIN_TOT = sin(TH_TOT);
+
+   G4double len    = spx1.x_len - delta_x; 
+   G4double dx     = (len/2.)*fabs(COS);
+   G4double dz     = (len/2.)*fabs(SIN);
+   G4double dx_tot = (len/2.)*fabs(COS_TOT);
+   G4double dz_tot = (len/2.)*fabs(SIN_TOT);
+ 
    // place it
-   G4double x_up = delta_x; 
-   G4double y_up = delta_y; 
-   G4double z_up = delta_z;
-   // std::cout << "Enclosure coordinates (x,y,z) = (" << x_up << "," << y_up << "," << z_up << ")" << std::endl;  
-   G4ThreeVector P_up = G4ThreeVector(x_up,y_up,z_up); // offset so it's barely touching 
-   new G4PVPlacement(0,                   // rotation [relative to mother]    
-                     P_up,                // position [relative to mother] 
+   G4double shield_x = delta_x + dx;  
+   G4double shield_y = delta_y;     
+   G4double shield_z = delta_z + dz;  
+
+   G4ThreeVector P_s = G4ThreeVector(shield_x,shield_y,shield_z); // offset so it's barely touching
+   G4RotationMatrix *rm_s = new G4RotationMatrix();
+   rm_s->rotateX(0.*deg); rm_s->rotateY(dry); rm_s->rotateZ(0.*deg); 
+ 
+   new G4PVPlacement(rm_s,                // rotation [relative to mother]    
+                     P_s,                 // position [relative to mother] 
                      logicEnclosure,      // logical volume    
                      "physEnclosure",     // name                          
                      logicMother,         // logical mother volume            
                      false,               // no boolean operations          
                      0,                   // copy number                   
-                     fCheckOverlaps);     // check overlaps                
+                     fCheckOverlaps);     // check overlaps               
+
+   // place a copy of the part, rotated by 180 deg 
+   G4double shield_x_cpy = -(delta_x + dx_tot);  
+   G4double shield_y_cpy = shield_y;
+   G4double shield_z_cpy = -(delta_z + dz_tot);  
+
+   G4ThreeVector P_cpy = G4ThreeVector(shield_x_cpy,shield_y_cpy,shield_z_cpy); 
+   G4RotationMatrix *rm_cpy = new G4RotationMatrix();
+   rm_cpy->rotateX(0.*deg); rm_cpy->rotateY(180.*deg+dry); rm_cpy->rotateZ(0.*deg); 
+ 
+   new G4PVPlacement(rm_cpy,              // rotation [relative to mother]    
+                     P_cpy,               // position [relative to mother] 
+                     logicEnclosure,      // logical volume    
+                     "physEnclosure",     // name                          
+                     logicMother,         // logical mother volume            
+                     false,               // no boolean operations          
+                     1,                   // copy number                   
+                     fCheckOverlaps);     // check overlaps              
+ 
 }
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildSupportFrame(){
