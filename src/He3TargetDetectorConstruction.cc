@@ -506,11 +506,8 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    G4double delta_x = 51.21*cm; // 24.19*25.4*mm - 9.5*cm;    // offset of whole enclosure in x direction  
    G4double delta_y = 0.*mm;                     // offset of whole enclosure in y direction  
    G4double delta_z = 0.*mm;                     // offset of whole enclosure in z direction 
-   G4double dry     = 43.5*deg;                      // rotation angle of whole unit about y axis 
 
-   bool addDoor = false;                         // add door to assembly   
-
-   //---- shield door upstream 
+   //---- shield door along x, upstream 
    partParameters_t sdu1;  
    GetPart("shield_door_up",sdu1);
    partParameters_t sdu2 = sdu1; 
@@ -519,101 +516,149 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    sdu1.z -= gap/2.; 
    sdu2.z += gap/2.;
 
-   // layer 1
-   G4Box *shieldDoor_up1     = new G4Box("sdu1",sdu1.x_len/2.,sdu1.y_len/2.,sdu1.z_len/2.);
+   // // layer 1
+   // G4Box *shieldDoor_up1     = new G4Box("sdu1",sdu1.x_len/2.,sdu1.y_len/2.,sdu1.z_len/2.);
+   // G4ThreeVector P_sdu1      = G4ThreeVector(sdu1.x,sdu1.y,sdu1.z);  
+   // G4RotationMatrix *rm_sdu1 = new G4RotationMatrix(); 
+   // rm_sdu1->rotateX(sdu1.rx); rm_sdu1->rotateY(sdu1.ry); rm_sdu1->rotateZ(sdu1.rz);   
 
-   G4ThreeVector P_sdu1      = G4ThreeVector(sdu1.x,sdu1.y,sdu1.z);  
-   G4RotationMatrix *rm_sdu1 = new G4RotationMatrix(); 
-   rm_sdu1->rotateX(sdu1.rx);   
-   rm_sdu1->rotateY(sdu1.ry);   
-   rm_sdu1->rotateZ(sdu1.rz);   
-
-   // layer 2 
-   G4Box *shieldDoor_up2     = new G4Box("sdu2",sdu2.x_len/2.,sdu2.y_len/2.,sdu2.z_len/2.);
-
-   G4ThreeVector P_sdu2      = G4ThreeVector(sdu2.x,sdu2.y,sdu2.z);  
-   G4RotationMatrix *rm_sdu2 = new G4RotationMatrix(); 
-   rm_sdu2->rotateX(sdu2.rx);   
-   rm_sdu2->rotateY(sdu2.ry);   
-   rm_sdu2->rotateZ(sdu2.rz);   
+   // // layer 2 
+   // G4Box *shieldDoor_up2     = new G4Box("sdu2",sdu2.x_len/2.,sdu2.y_len/2.,sdu2.z_len/2.);
+   // G4ThreeVector P_sdu2      = G4ThreeVector(sdu2.x,sdu2.y,sdu2.z);  
+   // G4RotationMatrix *rm_sdu2 = new G4RotationMatrix(); 
+   // rm_sdu2->rotateX(sdu2.rx); rm_sdu2->rotateY(sdu2.ry); rm_sdu2->rotateZ(sdu2.rz);   
    
-   //---- shield pane upstream  
-   partParameters_t spu1;  
-   GetPart("shield_pane_up",spu1);
-   partParameters_t spu2 = spu1; 
+   //---- shield pane along x, upstream  
+   partParameters_t spd1;  
+   GetPart("shield_pane_dn",spd1);
+   partParameters_t spd2 = spd1; 
 
    // finish definition of structure offset 
-   delta_z = spu1.z;  
+   delta_z = spd1.z;  
 
    // note the sign inversion here! 
+   spd1.z += gap/2.; 
+   spd2.z -= gap/2.; 
+
+   // layer 1
+   G4Box *shieldPane_dn1     = new G4Box("spd1",spd1.x_len/2.,spd1.y_len/2.,spd1.z_len/2.);
+   G4ThreeVector P_spd1      = G4ThreeVector(spd1.x,spd1.y,spd1.z);  
+   G4RotationMatrix *rm_spd1 = new G4RotationMatrix(); 
+   rm_spd1->rotateX(spd1.rx); rm_spd1->rotateY(spd1.ry); rm_spd1->rotateZ(spd1.rz);   
+
+   // layer 2 
+   G4Box *shieldPane_dn2     = new G4Box("spd2",spd2.x_len/2.,spd2.y_len/2.,spd2.z_len/2.);
+   G4ThreeVector P_spd2      = G4ThreeVector(spd2.x,spd2.y,spd2.z);  
+   G4RotationMatrix *rm_spd2 = new G4RotationMatrix(); 
+   rm_spd2->rotateX(spd2.rx); rm_spd2->rotateY(spd2.ry); rm_spd2->rotateZ(spd2.rz);
+
+   //---- shield pane, beam left [along z]  
+   partParameters_t spl1;  
+   GetPart("shield_pane_zl",spl1);
+   partParameters_t spl2 = spl1; 
+
+   // adjust in x direction because we are using the beam right pane as our origin 
+   spl1.x -= delta_x; 
+   spl2.x -= delta_x; 
+   // adjust for gap between layers 
+   spl1.x += gap/2.; 
+   spl2.x -= gap/2.; 
+
+   // layer 1
+   // beam-left parts, panes along z 
+   G4Box *shieldPane_l1      = new G4Box("spl1",spl1.x_len/2.,spl1.y_len/2.,spl1.z_len/2.);
+
+   G4ThreeVector P_spl1      = G4ThreeVector(spl1.x,spl1.y,spl1.z);  
+   G4RotationMatrix *rm_spl1 = new G4RotationMatrix(); 
+   rm_spl1->rotateX(spl1.rx); rm_spl1->rotateY(spl1.ry); rm_spl1->rotateZ(spl1.rz); 
+
+   // layer 2 
+   G4Box *shieldPane_l2      = new G4Box("spl2",spl2.x_len/2.,spl2.y_len/2.,spl2.z_len/2.);
+
+   G4ThreeVector P_spl2      = G4ThreeVector(spl2.x,spl2.y,spl2.z);  
+   G4RotationMatrix *rm_spl2 = new G4RotationMatrix(); 
+   rm_spl2->rotateX(spl2.rx); rm_spl2->rotateY(spl2.ry); rm_spl2->rotateZ(spl2.rz);
+
+   // beam-right parts
+
+   //---- shield pane, beam left [along z]  
+   partParameters_t spr1;  
+   GetPart("shield_pane_zr",spr1);
+   partParameters_t spr2 = spr1; 
+
+   // adjust in x direction because we are using the beam right pane as our origin 
+   spr1.x -= delta_x; 
+   spr2.x -= delta_x; 
+
+   // adjust for gap between layers 
+   spr1.x += gap/2.; 
+   spr2.x -= gap/2.; 
+
+   // std::cout << "spr1 beam right (x,y,z) = " << spr1.x/cm << "," << spr1.y/cm << "," << spr1.z/cm << std::endl;
+   // std::cout << "spr2 beam right (x,y,z) = " << spr2.x/cm << "," << spr2.y/cm << "," << spr2.z/cm << std::endl;
+
+   G4Box *shieldPane_r1      = new G4Box("spr1",spr1.x_len/2.,spr1.y_len/2.,spr1.z_len/2.); 
+   G4ThreeVector P_spr1      = G4ThreeVector(spr1.x,spr1.y,spr1.z); 
+   G4RotationMatrix *rm_spr1 = new G4RotationMatrix(); 
+   rm_spr1->rotateX(spr1.rx); rm_spr1->rotateY(spr1.ry); rm_spr1->rotateZ(spr1.rz);
+ 
+   G4Box *shieldPane_r2      = new G4Box("spr2",spr2.x_len/2.,spr2.y_len/2.,spr2.z_len/2.);  
+   G4ThreeVector P_spr2      = G4ThreeVector(spr2.x,spr2.y,spr2.z); 
+   G4RotationMatrix *rm_spr2 = new G4RotationMatrix(); 
+   rm_spr2->rotateX(spr2.rx); rm_spr2->rotateY(spr2.ry); rm_spr2->rotateZ(spr2.rz);
+
+   //---- shield pane, upstream [along x]
+   partParameters_t spu1; 
+   GetPart("shield_pane_up",spu1); 
+   partParameters_t spu2 = spu1; 
+
+   // adjust for gap  
    spu1.z += gap/2.; 
-   spu2.z -= gap/2.; 
+   spu2.z -= gap/2.;
+   // adjust for z positioning relative to downstream pane 
+   spu1.z -= delta_z; 
+   spu2.z -= delta_z; 
 
    // layer 1
    G4Box *shieldPane_up1     = new G4Box("spu1",spu1.x_len/2.,spu1.y_len/2.,spu1.z_len/2.);
-
    G4ThreeVector P_spu1      = G4ThreeVector(spu1.x,spu1.y,spu1.z);  
    G4RotationMatrix *rm_spu1 = new G4RotationMatrix(); 
-   rm_spu1->rotateX(spu1.rx);   
-   rm_spu1->rotateY(spu1.ry);   
-   rm_spu1->rotateZ(spu1.rz);   
+   rm_spu1->rotateX(spu1.rx); rm_spu1->rotateY(spu1.ry); rm_spd1->rotateZ(spu1.rz);   
 
    // layer 2 
    G4Box *shieldPane_up2     = new G4Box("spu2",spu2.x_len/2.,spu2.y_len/2.,spu2.z_len/2.);
-
    G4ThreeVector P_spu2      = G4ThreeVector(spu2.x,spu2.y,spu2.z);  
    G4RotationMatrix *rm_spu2 = new G4RotationMatrix(); 
-   rm_spu2->rotateX(spu2.rx);   
-   rm_spu2->rotateY(spu2.ry);   
-   rm_spu2->rotateZ(spu2.rz);  
+   rm_spu2->rotateX(spu2.rx); rm_spu2->rotateY(spu2.ry); rm_spu2->rotateZ(spu2.rz);
 
-   //---- shield pane along x  
-   partParameters_t spx1;  
-   GetPart("shield_pane_x",spx1);
-   partParameters_t spx2 = spx1; 
-
-   spx1.x += gap/2.; 
-   spx2.x -= gap/2.; 
- 
-   // apply offset for placement 
-   spx1.x -= delta_x; 
-   spx2.x -= delta_x;
-
-   // layer 1
-   G4Box *shieldPane_x1      = new G4Box("spx1",spx1.x_len/2.,spx1.y_len/2.,spx1.z_len/2.);
-
-   G4ThreeVector P_spx1      = G4ThreeVector(spx1.x,spx1.y,spx1.z);  
-   G4RotationMatrix *rm_spx1 = new G4RotationMatrix(); 
-   rm_spx1->rotateX(spx1.rx);   
-   rm_spx1->rotateY(spx1.ry);   
-   rm_spx1->rotateZ(spx1.rz);   
-
-   // layer 2 
-   G4Box *shieldPane_x2      = new G4Box("spx2",spx2.x_len/2.,spx2.y_len/2.,spx2.z_len/2.);
-
-   G4ThreeVector P_spx2      = G4ThreeVector(spx2.x,spx2.y,spx2.z);  
-   G4RotationMatrix *rm_spx2 = new G4RotationMatrix(); 
-   rm_spx2->rotateX(spx2.rx);   
-   rm_spx2->rotateY(spx2.ry);   
-   rm_spx2->rotateZ(spx2.rz);  
+   std::cout << "spu1 beam right (x,y,z) = " << spu1.x/cm << "," << spu1.y/cm << "," << spu1.z/cm << std::endl;
+   std::cout << "spu2 beam right (x,y,z) = " << spu2.x/cm << "," << spu2.y/cm << "," << spu2.z/cm << std::endl;
 
    // collect into single object
    G4RotationMatrix *rm0 = new G4RotationMatrix(); 
    rm0->rotateX(0); rm0->rotateY(0); rm0->rotateZ(0); 
- 
+
+   // build the object along the x axis.  Then center and rotate it 
    G4UnionSolid *enclosure; 
-   // [upstream] pane inner and outer  
-   G4ThreeVector P_pu2     = G4ThreeVector(0.,0,gap);                              // relative to pane 1  
-   enclosure = new G4UnionSolid("su_p12",shieldPane_up1,shieldPane_up2,0,P_pu2);  
-   // [upstream] door, inner panel 
-   G4ThreeVector P_du1 = G4ThreeVector(-(sdu1.x_len/2.+spu1.x_len/2.),0,0);    
-   if(addDoor) enclosure = new G4UnionSolid("su_p12_d1",enclosure,shieldDoor_up1,0,P_du1);   
-   // [upstream] door, outer panel   
-   G4ThreeVector P_du2 = G4ThreeVector(-(sdu1.x_len/2.+spu1.x_len/2.),0,gap);   
-   if(addDoor) enclosure = new G4UnionSolid("su_p12_d12",enclosure,shieldDoor_up2,0,P_du2);   
-   // [along x] pane 
-   enclosure = new G4UnionSolid("su_p12_d12_x1",enclosure,shieldPane_x1,rm_spx1,P_spx1);   
-   enclosure = new G4UnionSolid("shield_half"  ,enclosure,shieldPane_x2,rm_spx2,P_spx2);   
+   // [downstream] pane inner and outer  
+   G4ThreeVector P_pd2     = G4ThreeVector(0.,0,gap);                              // relative to pane 1  
+   enclosure = new G4UnionSolid("sd_p12",shieldPane_dn1,shieldPane_dn2,0,P_pd2);  
+   // // [downstream] door, inner panel 
+   // G4ThreeVector P_dd1 = G4ThreeVector(-(sdu1.x_len/2.+spd1.x_len/2.),0,0);    
+   // enclosure = new G4UnionSolid("sd_p12_d1",enclosure,shieldDoor_up1,0,P_dd1);   
+   // // [downstream] door, outer panel   
+   // G4ThreeVector P_dd2 = G4ThreeVector(-(sdu1.x_len/2.+spd1.x_len/2.),0,gap);   
+   // enclosure = new G4UnionSolid("sd_p12_d12",enclosure,shieldDoor_up2,0,P_dd2);   
+   // [beam left] pane, along z  
+   enclosure = new G4UnionSolid("sd_p12_d12_l1" ,enclosure,shieldPane_l1,rm_spl1,P_spl1);   
+   enclosure = new G4UnionSolid("sd_p12_d12_l12",enclosure,shieldPane_l2,rm_spl2,P_spl2);   
+   // [beam right] pane, along z  
+   enclosure = new G4UnionSolid("sd_p12_d12_l12_r1" ,enclosure,shieldPane_r1,rm_spr1,P_spr1);   
+   enclosure = new G4UnionSolid("sd_p12_d12_l12_r12",enclosure,shieldPane_r2,rm_spr2,P_spr2);  
+   // [upstream] pane, inner  
+   enclosure = new G4UnionSolid("sd_p12_d12_l12_r12_u1",enclosure,shieldPane_up1,rm_spu1,P_spu1);  
+   // [upstream] pane, outer  
+   enclosure = new G4UnionSolid("shield"               ,enclosure,shieldPane_up2,rm_spu2,P_spu2);  
 
    // visualization 
    G4VisAttributes *vis = new G4VisAttributes();
@@ -626,26 +671,25 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
 
    // adjust for y rotation.  
    // FIXME: I don't like that this doesn't follow the rotated coordinates...
-   G4double COS     = cos(90.*deg+dry); 
-   G4double SIN     = sin(90.*deg+dry);
-   G4double TH_TOT  = 180.*deg + dry; 
-   G4double COS_TOT = cos(TH_TOT); 
-   G4double SIN_TOT = sin(TH_TOT);
+   // FIXME: Don't know the actual rotation angle!
+   G4double dry     = -32.0*deg;          // 43.5? rotation angle of whole unit about y axis 
+   G4double RY      = dry;
+   G4double COS     = cos(RY); 
+   G4double SIN     = sin(RY);
 
-   G4double len    = spx1.x_len - delta_x; 
-   G4double dx     = (len/2.)*fabs(COS);
-   G4double dz     = (len/2.)*fabs(SIN);
-   G4double dx_tot = (len/2.)*fabs(COS_TOT);
-   G4double dz_tot = (len/2.)*fabs(SIN_TOT);
+   G4double len    = spl1.x_len - delta_x; 
+   G4double dx     =  (len/2.)*fabs(COS);
+   G4double dz     = -(len/2.)*fabs(SIN);
  
-   // place it
-   G4double shield_x = delta_x + dx;  
+   // place it.  these coordinates center the shield on the target
+   // FIXME: Can we remove the fudge factor? 
+   G4double shield_x = delta_x + dx - 15.*cm;    
    G4double shield_y = delta_y;     
    G4double shield_z = delta_z + dz;  
 
-   G4ThreeVector P_s = G4ThreeVector(shield_x,shield_y,shield_z); // offset so it's barely touching
+   G4ThreeVector P_s      = G4ThreeVector(shield_x,shield_y,shield_z); 
    G4RotationMatrix *rm_s = new G4RotationMatrix();
-   rm_s->rotateX(0.*deg); rm_s->rotateY(dry); rm_s->rotateZ(0.*deg); 
+   rm_s->rotateX(0.*deg); rm_s->rotateY(RY); rm_s->rotateZ(0.*deg); 
  
    new G4PVPlacement(rm_s,                // rotation [relative to mother]    
                      P_s,                 // position [relative to mother] 
@@ -655,24 +699,6 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
                      false,               // no boolean operations          
                      0,                   // copy number                   
                      fCheckOverlaps);     // check overlaps               
-
-   // place a copy of the part, rotated by 180 deg 
-   G4double shield_x_cpy = -(delta_x + dx_tot);  
-   G4double shield_y_cpy = shield_y;
-   G4double shield_z_cpy = -(delta_z + dz_tot);  
-
-   G4ThreeVector P_cpy = G4ThreeVector(shield_x_cpy,shield_y_cpy,shield_z_cpy); 
-   G4RotationMatrix *rm_cpy = new G4RotationMatrix();
-   rm_cpy->rotateX(0.*deg); rm_cpy->rotateY(180.*deg+dry); rm_cpy->rotateZ(0.*deg); 
- 
-   new G4PVPlacement(rm_cpy,              // rotation [relative to mother]    
-                     P_cpy,               // position [relative to mother] 
-                     logicEnclosure,      // logical volume    
-                     "physEnclosure",     // name                          
-                     logicMother,         // logical mother volume            
-                     false,               // no boolean operations          
-                     1,                   // copy number                   
-                     fCheckOverlaps);     // check overlaps              
  
 }
 //______________________________________________________________________________
