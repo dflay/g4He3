@@ -502,7 +502,7 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    //   - outer surfaces of layers separated by 1.29" 
    //     => 1.29/2 - 0.25 = 0.395" center-to-center distance 
    // - Layer 1 = outside layer, Layer 2 = inside layer 
-   // - See drawing A09016-03-05-0000 
+   // - drawing number: A09016-03-05-0000 
    
    G4double gap = 1.00*cm; // 0.395" center-to-center distance 
 
@@ -707,11 +707,12 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
 }
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMother){
-   // support frame for polarization enclosure
-   // this comes close to the beam path
-   // See drawing A09016-03-04-0601
+   // ladder plate  
+   // - this comes close to the beam path
+   // - drawing number: A09016-03-04-0601
 
    //---- vertical posts along y axis 
+   // upstream 
    partParameters_t lvu; 
    GetPart("ladder_vert_up",lvu); 
 
@@ -720,6 +721,7 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    G4RotationMatrix *rm_lvu = new G4RotationMatrix(); 
    rm_lvu->rotateX(lvu.rx); rm_lvu->rotateY(lvu.ry); rm_lvu->rotateZ(lvu.rz);   
 
+   // downstream 
    partParameters_t lvd; 
    GetPart("ladder_vert_dn",lvd); 
 
@@ -737,6 +739,7 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    G4RotationMatrix *rm_la = new G4RotationMatrix(); 
    rm_la->rotateX(la.rx); rm_la->rotateY(la.ry); rm_la->rotateZ(la.rz);   
 
+   //---- horizontal part below, along z axis 
    // FIXME: This is an approximated length in z!
    partParameters_t lb; 
    GetPart("ladder_below",lb); 
@@ -745,6 +748,42 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    G4ThreeVector P_lb      = G4ThreeVector(lb.x,lb.y,lb.z);  
    G4RotationMatrix *rm_lb = new G4RotationMatrix(); 
    rm_lb->rotateX(lb.rx); rm_lvd->rotateY(lb.ry); rm_lb->rotateZ(lb.rz);   
+
+   //---- angular part above, along z axis, upstream 
+   partParameters_t aau; 
+   GetPart("ladder_ang_above_up",aau); 
+
+   G4Box *ladder_aau        = new G4Box("aau",aau.x_len/2.,aau.y_len/2.,aau.z_len/2.);
+   G4ThreeVector P_aau      = G4ThreeVector(aau.x,aau.y,aau.z);  
+   G4RotationMatrix *rm_aau = new G4RotationMatrix(); 
+   rm_aau->rotateX(aau.rx); rm_aau->rotateY(aau.ry); rm_aau->rotateZ(aau.rz);   
+
+   //---- angular part above, along z axis, downstream 
+   partParameters_t aad; 
+   GetPart("ladder_ang_above_dn",aad); 
+
+   G4Box *ladder_aad        = new G4Box("aad",aad.x_len/2.,aad.y_len/2.,aad.z_len/2.);
+   G4ThreeVector P_aad      = G4ThreeVector(aad.x,aad.y,aad.z);  
+   G4RotationMatrix *rm_aad = new G4RotationMatrix(); 
+   rm_aad->rotateX(aad.rx); rm_aad->rotateY(aad.ry); rm_aad->rotateZ(aad.rz);   
+
+   //---- angular part below, along z axis, upstream 
+   partParameters_t abu; 
+   GetPart("ladder_ang_below_up",abu); 
+
+   G4Box *ladder_abu        = new G4Box("abu",abu.x_len/2.,abu.y_len/2.,abu.z_len/2.);
+   G4ThreeVector P_abu      = G4ThreeVector(abu.x,abu.y,abu.z);  
+   G4RotationMatrix *rm_abu = new G4RotationMatrix(); 
+   rm_abu->rotateX(abu.rx); rm_abu->rotateY(abu.ry); rm_abu->rotateZ(abu.rz);   
+
+   //---- angular part below, along z axis, downstream 
+   partParameters_t abd; 
+   GetPart("ladder_ang_below_dn",abd); 
+
+   G4Box *ladder_abd        = new G4Box("abd",abd.x_len/2.,abd.y_len/2.,abd.z_len/2.);
+   G4ThreeVector P_abd      = G4ThreeVector(abd.x,abd.y,abd.z);  
+   G4RotationMatrix *rm_abd = new G4RotationMatrix(); 
+   rm_abd->rotateX(abd.rx); rm_abd->rotateY(abd.ry); rm_abd->rotateZ(abd.rz);   
 
    // unions -- vectors are relative to the upstream post  
    G4UnionSolid *ladder; 
@@ -757,10 +796,14 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    // [below] horizontal 
    G4ThreeVector P_b   = G4ThreeVector(0.,lb.y,lb.z);     
    ladder = new G4UnionSolid("lud_ab",ladder,ladder_below,0,P_b); 
-   // [above] angled, upstream  
-   // [above] angled, downstream  
-   // [below] angled, upstream  
+   // [above] angled above, upstream  
+   ladder = new G4UnionSolid("lud_ab_aau",ladder,ladder_aau,rm_aau,P_aau); 
+   // [above] angled below, downstream  
+   ladder = new G4UnionSolid("lud_ab_aaud",ladder,ladder_aad,rm_aad,P_aad); 
+   // [below] angled below, upstream  
+   ladder = new G4UnionSolid("lud_ab_aaud_abu",ladder,ladder_abu,rm_abu,P_abu); 
    // [below] angled, downstream  
+   ladder = new G4UnionSolid("ladder",ladder,ladder_abd,rm_abd,P_abd); 
 
    G4VisAttributes *vis = new G4VisAttributes(); 
    vis->SetColour( G4Colour::Red() ); 
@@ -769,8 +812,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    G4LogicalVolume *logicLadder = new G4LogicalVolume(ladder,GetMaterial("Aluminum"),"logicLadder"); 
    logicLadder->SetVisAttributes(vis); 
 
-   G4double lx = -5.*cm; // 5 cm beam right
-   G4double ly = 0.*cm; 
+   G4double lx = lvu.x; // FIXME: 5 cm beam right
+   G4double ly = lvu.y; 
    G4double lz = lvu.z; 
     
    G4ThreeVector P_l      = G4ThreeVector(lx,ly,lz);   
@@ -923,7 +966,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
    G4double y = cn.y;  
    G4double z = cn.z;  
 
-   // additional rotation to match engineering drawings (A09016-03-08-0000) 
+   // additional rotation to match engineering drawings (number A09016-03-08-0000) 
    G4double drx=0,dry=0,drz=0;
    if( type.compare("maj")==0 || type.compare("min")==0 ) dry = 43.5*deg;  
  
