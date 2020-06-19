@@ -500,11 +500,11 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // - the shield is actually two layers
    //   - each layer is 0.25" thick
    //   - outer surfaces of layers separated by 1.29" 
-   //     => 1.29/2 - 0.25 = 0.395" center-to-center distance 
+   //     => 1.29 - 0.25 = 1.04" center-to-center distance 
    // - Layer 1 = outside layer, Layer 2 = inside layer 
    // - drawing number: A09016-03-05-0000 
    
-   G4double gap = 1.00*cm; // 0.395" center-to-center distance 
+   G4double gap = 1.04*2.54*cm; // 0.52" center-to-center distance 
 
    // offset is somewhat arbitrary, choosing to center the entire enclosure based on its full extended length 
    G4double delta_x = 51.21*cm; // 24.19*25.4*mm - 9.5*cm;    // offset of whole enclosure in x direction  
