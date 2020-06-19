@@ -837,11 +837,9 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
    //          min = small radius coil pair 
    //          rfy = RF coil pair, aligned along the vertical (y) axis  
    // - distance between coils D = 0.5(rmin+rmax), roughly the major radius of the tube   
-   // - coil 1 (placed at -D/2) 
-   // - coil 2 (placed at +D/2)
-   // TODO: Turn all of these into toruses!
-   //       - shell with appropriate r_min,r_max
-   //       - core with r_min = 0, r_tor = central radius of shell  
+   //   - coil 1 (placed at -D/2) 
+   //   - coil 2 (placed at +D/2)
+   // drawing number: A09016-03-08-0000
 
    char partName[14];
    char coilName_n[200],coilName_p[200];   // shape name 
@@ -879,8 +877,8 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
    G4double D      = cn.r_tor;          // helmholtz separation D = R = 0.5(rmin + rmax) 
    G4double shWall = 0;  
 
-   if( type.compare("maj")==0 ) shWall = 5.0*mm;         // TODO: Estimates for now! 
-   if( type.compare("min")==0 ) shWall = 5.0*mm;         // TODO: Estimates for now! 
+   if( type.compare("maj")==0 ) shWall = 5.0*mm;         // FIXME: Estimates for now! 
+   if( type.compare("min")==0 ) shWall = 5.0*mm;         // FIXME: Estimates for now! 
    if( type.compare("rfy")==0 ) shWall = 0.030*25.4*mm; 
 
    // cylindrical geometry 
