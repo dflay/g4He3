@@ -532,7 +532,7 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // G4RotationMatrix *rm_sdu2 = new G4RotationMatrix(); 
    // rm_sdu2->rotateX(sdu2.rx); rm_sdu2->rotateY(sdu2.ry); rm_sdu2->rotateZ(sdu2.rz);   
    
-   //---- shield pane along x, upstream  
+   //---- shield pane along x, downstream  
    partParameters_t spd1;  
    GetPart("shield_pane_dn",spd1);
    partParameters_t spd2 = spd1; 
@@ -676,20 +676,42 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // adjust for y rotation.  
    // FIXME: I don't like that this doesn't follow the rotated coordinates...
    // FIXME: Don't know the actual rotation angle!
-   G4double dry     = -32.0*deg;          // 43.5? rotation angle of whole unit about y axis 
+   G4double dry     = -43.5*deg; // -32.0*deg;          // 43.5? rotation angle of whole unit about y axis 
    G4double RY      = dry;
    G4double COS     = cos(RY); 
    G4double SIN     = sin(RY);
 
-   G4double len    = spl1.x_len - delta_x; 
-   G4double dx     =  (len/2.)*fabs(COS);
-   G4double dz     = -(len/2.)*fabs(SIN);
+   G4double len    = spl1.x_len; // - delta_x; 
+   // G4double dx     =  (len/2.)*fabs(COS);
+   // G4double dz     = -(len/2.)*fabs(SIN);
  
    // place it.  these coordinates center the shield on the target
    // FIXME: Can we remove the fudge factor? 
-   G4double shield_x = delta_x + dx - 15.*cm;    
-   G4double shield_y = delta_y;     
-   G4double shield_z = delta_z + dz;  
+   // G4double shield_x = delta_x + dx - 15.*cm;    
+   // G4double shield_y = delta_y;     
+   // G4double shield_z = delta_z + dz;  
+
+   // union starts from the downstream pane aligned along x
+   // base new coordinates on undoing the new coordinates due to rotation
+   // (mimic rotation about origin)   
+   // x' =  xcos + zsin 
+   // z' = -xsin + zcos 
+   G4double LEN = 88.7*2.54*cm;    // width of whole structure  
+   G4double x0 = delta_x;          // shift the pane to larger x to center the whole unit  
+   G4double y0 = 0;
+   G4double z0 = LEN/2.;
+   G4double dx = x0*COS + z0*SIN; 
+   G4double dy = 0; 
+   G4double dz = -x0*SIN + z0*COS; 
+
+   // fudge factors... avoid as much as possible!
+   G4double fx = 0.; 
+   G4double fy = 0.;
+   G4double fz = 0.;
+
+   G4double shield_x = x0 - dx + fx;  
+   G4double shield_y = y0 - dy + fy;  
+   G4double shield_z = z0 - dz + fz;  
 
    G4ThreeVector P_s      = G4ThreeVector(shield_x,shield_y,shield_z); 
    G4RotationMatrix *rm_s = new G4RotationMatrix();
