@@ -40,6 +40,7 @@
 #include "globals.hh"
 
 #include "He3TargetPartParameters.hh"
+#include "He3TargetEnumerate.hh"
 
 #include "G4Transform3D.hh"
 #include "G4PhysicalConstants.hh"
@@ -75,21 +76,25 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
     virtual G4VPhysicalVolume* Construct();
     
     G4LogicalVolume* GetScoringVolume() const { return fScoringVolume; }
+   
+    void SetHelmholtzConfig(int x){ fHelmholtzCoilConfig = x; }  // see He3TargetEnumerate for options 
 
   protected:
     G4LogicalVolume*  fScoringVolume;
 
   private:
+   int fHelmholtzCoilConfig;  // switch for for helmholz coil angle 
    bool fDebug,fCheckOverlaps;
    std::vector<partParameters_t> fPartData;
    std::map<G4String,G4Material *> fMaterialsMap;  
 
    G4Material *GetMaterial(G4String name);
+
    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
    void BuildShield(G4LogicalVolume *logicMother); 
    void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
-   void BuildHelmholtzCoils(const std::string type,G4LogicalVolume *logicMother); 
+   void BuildHelmholtzCoils(int config,const std::string type,G4LogicalVolume *logicMother); 
    void BuildEndWindow(const std::string type,G4LogicalVolume *logicMother);
 
    G4LogicalVolume *BuildGlassCell();

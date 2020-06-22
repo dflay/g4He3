@@ -32,7 +32,7 @@
 //______________________________________________________________________________
 He3TargetDetectorConstruction::He3TargetDetectorConstruction()
 : G4VUserDetectorConstruction(),
-  fScoringVolume(0),fDebug(false),fCheckOverlaps(true)
+  fScoringVolume(0),fDebug(false),fCheckOverlaps(true),fHelmholtzCoilConfig(kSBS_GEN_368)
 { }
 //______________________________________________________________________________
 He3TargetDetectorConstruction::~He3TargetDetectorConstruction()
@@ -201,9 +201,10 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildPolarizedHe3(logicGlassCell);
 
   // helmholtz coils
-  BuildHelmholtzCoils("maj",logicWorld);  
-  BuildHelmholtzCoils("rfy",logicWorld);  
-  BuildHelmholtzCoils("min",logicWorld); 
+  fHelmholtzCoilConfig = kSBS_GEN_677;  
+  BuildHelmholtzCoils(fHelmholtzCoilConfig,"maj",logicWorld);  
+  BuildHelmholtzCoils(fHelmholtzCoilConfig,"rfy",logicWorld);  
+  BuildHelmholtzCoils(fHelmholtzCoilConfig,"min",logicWorld); 
 
   // shield 
   BuildShield(logicWorld); 
@@ -853,8 +854,11 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    
 }
 //______________________________________________________________________________
-void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G4LogicalVolume *logicMother){
+void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::string type,G4LogicalVolume *logicMother){
    // Helmholtz coils for B fields 
+   // - config: SBS_GEN_677,SBS_GEN_1018, SBS_GEN_368
+   //           677: Eb = 6.77 GeV; 1018: Eb = 10.18 GeV; 368: Eb = 3.68 GeV.  
+   //           Different rotation angle based on Eb  
    // - types: maj = large radius coil pair
    //          min = small radius coil pair 
    //          rfy = RF coil pair, aligned along the vertical (y) axis  
@@ -988,33 +992,42 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(const std::string type,G
 
    // additional rotation to match engineering drawings (number A09016-03-08-0000) 
    G4double drx=0,dry=0,drz=0;
-   if( type.compare("maj")==0 || type.compare("min")==0 ) dry = 43.5*deg;  
+   if( type.compare("maj")==0 || type.compare("min")==0 ){
+      if(config==kSBS_GEN_677)  dry = 10.0*deg; 
+      if(config==kSBS_GEN_1018) dry = 10.0*deg; 
+      if(config==kSBS_GEN_146)  dry = 43.5*deg; 
+      if(config==kSBS_GEN_368)  dry = 43.5*deg; 
+   } 
+
+   G4double ph_x = cn.rx + drx; 
+   G4double ph_y = cn.ry + dry; 
+   G4double ph_z = cn.rz + drz; 
  
+   // total rotation
+   G4double COS_TOT = cos(ph_y); 
+   G4double SIN_TOT = sin(ph_y);
+
+   // adjust for y rotation.  
+   // FIXME: does this exactly follow rotated coordinates?
    // rotation about y 
    // x' =  xcos + zsin 
    // z' = -xsin + zcos
  
-   G4double ph = cn.ry + dry;  // total angular rotation!  
-   G4double COS = cos(ph); 
-   G4double SIN = sin(ph);
-
-   // adjust for y rotation.  
-   // FIXME: I don't like that this doesn't follow the rotated coordinates...  
    if(type.compare("maj")==0){ 
-      x += (D/2)*fabs(COS); 
-      z += (D/2)*fabs(SIN);
+      x += (D/2)*fabs(SIN_TOT); 
+      z += (D/2)*fabs(COS_TOT);
    }else if(type.compare("rfy")==0){
       y -= D/2.;
    }else if(type.compare("min")==0){
-      x += (D/2)*fabs(COS); 
-      z -= (D/2)*fabs(SIN);
+      x += (D/2)*fabs(SIN_TOT); 
+      z -= (D/2)*fabs(COS_TOT);
    } 
  
    G4ThreeVector P_c    = G4ThreeVector(x,y,z);   
    G4RotationMatrix *rm = new G4RotationMatrix();
-   rm->rotateX(cn.rx+drx); 
-   rm->rotateY(cn.ry+dry); 
-   rm->rotateZ(cn.rz+drz);
+   rm->rotateX(ph_x); 
+   rm->rotateY(ph_y); 
+   rm->rotateZ(ph_z);
 
    char coilShellName[200];
    sprintf(coilShellName,"%s_shell",partName);  
