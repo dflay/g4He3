@@ -60,6 +60,7 @@
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
 #include "G4UnionSolid.hh"
+#include "G4SubtractionSolid.hh"
 #include "G4SystemOfUnits.hh"
 
 class G4VPhysicalVolume;
@@ -90,7 +91,7 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
 
    G4Material *GetMaterial(G4String name);
 
-   
+   void BuildPickupCoils(G4LogicalVolume *logicMother);    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
    void BuildShield(G4LogicalVolume *logicMother); 
    void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
