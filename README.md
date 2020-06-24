@@ -9,7 +9,7 @@ cylindrical or toroidal geometries.
 
 ## Materials
 
-Choose the main material to be aluminum.  Assume copper wiring is a small effect
+Choose the core material to be aluminum.  Assume copper wiring is a small effect
 
 ## Cylindrical Geometry Dimensions 
 
