@@ -32,7 +32,8 @@
 //______________________________________________________________________________
 He3TargetDetectorConstruction::He3TargetDetectorConstruction()
 : G4VUserDetectorConstruction(),
-  fScoringVolume(0),fHelmholtzCoilConfig(kSBS_GEN_368),fDebug(false),fCheckOverlaps(true)
+  fScoringVolume(0),fHelmholtzCoilConfig(kSBS_GEN_368),fDebug(false),
+  fCheckOverlaps(true)
 { }
 //______________________________________________________________________________
 He3TargetDetectorConstruction::~He3TargetDetectorConstruction()
@@ -1256,7 +1257,8 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
  
 }
 //______________________________________________________________________________
-void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::string type,G4LogicalVolume *logicMother){
+void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::string type,
+                                                        G4LogicalVolume *logicMother){
    // Helmholtz coils for B fields 
    // - config: SBS_GEN_677,SBS_GEN_1018, SBS_GEN_368
    //           677: Eb = 6.77 GeV; 1018: Eb = 10.18 GeV; 368: Eb = 3.68 GeV.  
@@ -1294,6 +1296,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    sprintf(shellName_np,"shell_phys_%s_n"   ,partName);  
    sprintf(shellName_pp,"shell_phys_%s_p"   ,partName);  
 
+   // load parameter data 
    partParameters_t cn,cp;
    GetPart(partName,cn); 
    cp = cn;
@@ -1301,8 +1304,8 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    cp.name = coilName_p;  
 
    // coil parameters   
-   // G4double D      = 0.5*(cn.r_min + cn.r_max);          // helmholtz separation D = R = 0.5(rmin + rmax) 
-   G4double D      = cn.r_tor;          // helmholtz separation D = R = 0.5(rmin + rmax) 
+   G4double D      = 0.5*(cn.r_min + cn.r_max);          // helmholtz separation D = R = 0.5(rmin + rmax) 
+   // G4double D      = cn.r_tor;          // helmholtz separation D = R = 0.5(rmin + rmax) 
    G4double shWall = 0;  
 
    if( type.compare("maj")==0 ) shWall = 5.0*mm;         // FIXME: Estimates for now! 
@@ -1311,71 +1314,92 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 
    // cylindrical geometry 
    // create the shell first 
+    partParameters_t cns;
+    cns.name     = shellName_n; 
+    cns.r_min    = cn.r_min - shWall;  
+    cns.r_max    = cn.r_max + shWall; 
+    cns.length   = cn.length + 2.*shWall; // this is so we have the wall on both sides
+    cns.startPhi = 0.*deg;
+    cns.dPhi     = 360.*deg;   
+  
+    G4Tubs *cnsTube = new G4Tubs(cns.name,
+                                 cns.r_min    ,cns.r_max,
+                                 cns.length/2.,
+                                 cns.startPhi ,cns.dPhi);
+ 
+    partParameters_t cps;
+    cps.name     = shellName_p; 
+    cps.r_min    = cp.r_min - shWall;  
+    cps.r_max    = cp.r_max + shWall; 
+    cps.length   = cp.length + 2.*shWall; // this is so we have the wall on both sides
+    cps.startPhi = 0.*deg;
+    cps.dPhi     = 360.*deg;   
+ 
+    G4Tubs *cpsTube = new G4Tubs(cps.name,
+ 	                         cps.r_min    ,cps.r_max,
+ 	                         cps.length/2.,
+ 	                         cps.startPhi ,cps.dPhi);
+
+    // now create the core we subtract from the above 
+    partParameters_t cns_core = cn;
+    cns_core.name = cn.name + "_core"; 
+    G4Tubs *cnsTube_core = new G4Tubs(cns_core.name,
+                                      cns_core.r_min    ,cns_core.r_max,
+                                      cns_core.length/2.,
+                                      cns_core.startPhi ,cns_core.dPhi);
+
+    partParameters_t cps_core = cp;
+    cps_core.name = cp.name + "_core"; 
+    G4Tubs *cpsTube_core = new G4Tubs(cps_core.name,
+                                      cps_core.r_min    ,cps_core.r_max,
+                                      cps_core.length/2.,
+                                      cps_core.startPhi ,cps_core.dPhi);
+
+ 
+    // subtract the core 
+    G4SubtractionSolid *coilShell_n = new G4SubtractionSolid("cns_sub",cnsTube,cnsTube_core,0,G4ThreeVector(0,0,0));
+    G4SubtractionSolid *coilShell_p = new G4SubtractionSolid("cps_sub",cpsTube,cpsTube_core,0,G4ThreeVector(0,0,0));
+
+//    // torus geometry
+//    // - some adjustments here: we should make the *thickness* of the core 
+//    //   equal to the thickness specified in the drawings. 
+//    //   this is better than the estimate of the derived r_max of the torus centered on 
+//    //   the radius of curvature  
+//    cn.r_max = cn.length/2.;    
+//    cp.r_max = cp.length/2.;    
+// 
+//    // create the shell first 
 //    partParameters_t cns;
 //    cns.name     = shellName_n; 
-//    cns.r_min    = cn.r_min - shWall;  
-//    cns.r_max    = cn.r_max + shWall; 
+//    cns.r_min    = cn.r_max;  
+//    cns.r_max    = cn.r_max + shWall;
+//    cns.r_tor    = cn.r_tor;  
 //    cns.length   = cn.length;
 //    cns.startPhi = 0.*deg;
 //    cns.dPhi     = 360.*deg;   
 //  
-//    G4Tubs *cnsTube = new G4Tubs(cns.name,
-//                                 cns.r_min    ,cns.r_max,
-//                                 cns.length/2.,
-//                                 cns.startPhi ,cns.dPhi);
+//    G4Torus *cnsTube = new G4Torus(cns.name,
+//                                   cns.r_min   ,cns.r_max,cns.r_tor,
+//                                   cns.startPhi,cns.dPhi);
 // 
 //    partParameters_t cps;
 //    cps.name     = shellName_p; 
-//    cps.r_min    = cp.r_min - shWall;  
-//    cps.r_max    = cp.r_max + shWall; 
+//    cps.r_min    = cp.r_max;  
+//    cps.r_max    = cp.r_max + shWall;
+//    cps.r_tor    = cp.r_tor;  
 //    cps.length   = cp.length;
 //    cps.startPhi = 0.*deg;
 //    cps.dPhi     = 360.*deg;   
 // 
-//    G4Tubs *cpsTube = new G4Tubs(cps.name,
-// 	                        cps.r_min    ,cps.r_max,
-// 	                        cps.length/2.,
-// 	                        cps.startPhi ,cps.dPhi);
-
-   // torus geometry
-   // - some adjustments here: we should make the *thickness* of the core 
-   //   equal to the thickness specified in the drawings. 
-   //   this is better than the estimate of the derived r_max of the torus centered on 
-   //   the radius of curvature  
-   cn.r_max = cn.length/2.;    
-   cp.r_max = cp.length/2.;    
-
-   // create the shell first 
-   partParameters_t cns;
-   cns.name     = shellName_n; 
-   cns.r_min    = cn.r_max;  
-   cns.r_max    = cn.r_max + shWall;
-   cns.r_tor    = cn.r_tor;  
-   cns.length   = cn.length;
-   cns.startPhi = 0.*deg;
-   cns.dPhi     = 360.*deg;   
- 
-   G4Torus *cnsTube = new G4Torus(cns.name,
-                                  cns.r_min   ,cns.r_max,cns.r_tor,
-                                  cns.startPhi,cns.dPhi);
-
-   partParameters_t cps;
-   cps.name     = shellName_p; 
-   cps.r_min    = cp.r_max;  
-   cps.r_max    = cp.r_max + shWall;
-   cps.r_tor    = cp.r_tor;  
-   cps.length   = cp.length;
-   cps.startPhi = 0.*deg;
-   cps.dPhi     = 360.*deg;   
-
-   G4Torus *cpsTube = new G4Torus(cps.name,
-	                          cps.r_min   ,cps.r_max,cps.r_tor,
-	                          cps.startPhi,cps.dPhi);
+//    G4Torus *cpsTube = new G4Torus(cps.name,
+// 	                          cps.r_min   ,cps.r_max,cps.r_tor,
+// 	                          cps.startPhi,cps.dPhi);
 
    // create a union of the coils
    G4ThreeVector Ps = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
    G4UnionSolid *coilShells; 
-   coilShells = new G4UnionSolid("coilShells",cnsTube,cpsTube,0,Ps); // no rotation
+   // coilShells = new G4UnionSolid("coilShells",cnsTube,cpsTube,0,Ps); // no rotation
+   coilShells = new G4UnionSolid("coilShells",coilShell_n,coilShell_p,0,Ps); // no rotation
 
    // now for the logical volume 
    G4VisAttributes *visCoilShell = new G4VisAttributes();
@@ -1434,38 +1458,41 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    char coilShellName[200];
    sprintf(coilShellName,"%s_shell",partName);  
 
+   bool isBoolean = true; 
+
    new G4PVPlacement(rm,               // rotation                                        
                      P_c,              // position                                             
                      logicCoilShell,   // logical volume                                      
                      coilShellName,    // name                                                  
                      logicMother,      // logical mother volume is the target chamber          
-                     false,            // no boolean operations                        
+                     isBoolean,        // boolean operations                        
                      0,                // copy number                                   
                      fCheckOverlaps);  // check overlaps                              
 
-   // copper coil -- goes *inside* the shell  
+   // aluminum core -- goes *inside* the shell  
    G4VisAttributes *visCoil = new G4VisAttributes();
-   visCoil->SetColour( G4Colour(255,140,0) );  // dark orange 
+   // visCoil->SetColour( G4Colour(255,140,0) );  // dark orange 
+   visCoil->SetColour( G4Colour::Grey() );  
 
    // cylindrical geometry 
-//    G4Tubs *cnTube = new G4Tubs(cn.name,
-//                                cn.r_min,cn.r_max,
-//                                cn.length/2.,
-//                                cn.startPhi,cn.dPhi);
-// 
-//    G4Tubs *cpTube = new G4Tubs(cp.name,
-// 	                       cp.r_min,cp.r_max,
-// 	                       cp.length/2.,
-// 	                       cp.startPhi,cp.dPhi);
- 
-   // torus geometry  
-   G4Torus *cnTube = new G4Torus(cn.name,
-                                 cn.r_min   ,cn.r_max,cn.r_tor,
-                                 cn.startPhi,cn.dPhi);
+   G4Tubs *cnTube = new G4Tubs(cn.name,
+	                       cn.r_min,cn.r_max,
+	                       cn.length/2.,
+	                       cn.startPhi,cn.dPhi);
 
-   G4Torus *cpTube = new G4Torus(cp.name,
-	                         cp.r_min   ,cp.r_max,cp.r_tor,
-	                         cp.startPhi,cp.dPhi);
+   G4Tubs *cpTube = new G4Tubs(cp.name,
+	                       cp.r_min,cp.r_max,
+	                       cp.length/2.,
+	                       cp.startPhi,cp.dPhi);
+
+   // torus geometry  
+//    G4Torus *cnTube = new G4Torus(cn.name,
+//                                  cn.r_min   ,cn.r_max,cn.r_tor,
+//                                  cn.startPhi,cn.dPhi);
+// 
+//    G4Torus *cpTube = new G4Torus(cp.name,
+// 	                         cp.r_min   ,cp.r_max,cp.r_tor,
+// 	                         cp.startPhi,cp.dPhi);
 
    // create a union of the coils
    G4ThreeVector P      = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
@@ -1474,7 +1501,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    coils = new G4UnionSolid("coils",cnTube,cpTube,0,P); // no rotation
 
    // now for the logical volume 
-   G4LogicalVolume *logicCoils = new G4LogicalVolume(coils,GetMaterial("Copper"),"logicCoils");
+   G4LogicalVolume *logicCoils = new G4LogicalVolume(coils,GetMaterial("Aluminum"),"logicCoils");
    logicCoils->SetVisAttributes(visCoil);  
 
    // NOTE: the position is the "origin" because we already rotated 
@@ -1485,7 +1512,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
                      logicCoils,       // logical volume                                      
                      coilName_pp,      // name                                                  
                      logicCoilShell,   // logical mother volume          
-                     false,            // no boolean operations                        
+                     isBoolean,        // no boolean operations                        
                      0,                // copy number                                   
                      fCheckOverlaps);  // check overlaps                              
 
