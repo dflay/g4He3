@@ -213,10 +213,44 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildLadderPlate(logicWorld);
 
   // pickup coils 
-  BuildPickupCoils(logicWorld);  
+  BuildPickupCoils(logicWorld); 
+
+  // beam path (for reference only) 
+  BuildBeam(logicWorld);  
 
   // always return the physical World
   return physWorld;
+}
+//______________________________________________________________________________
+void He3TargetDetectorConstruction::BuildBeam(G4LogicalVolume *logicMother){
+   // build the nominal trajectory of the beam to use as a reference
+
+   partParameters_t beam; 
+   beam.r_min  = 0.*mm; 
+   beam.r_max  = 2.*mm; 
+   beam.length = 5.*m;
+   beam.dPhi   = 360.*deg;
+
+   G4Tubs *beamShape = new G4Tubs("beam",
+                                  beam.r_min    ,beam.r_max,
+                                  beam.length/2., 
+                                  beam.startPhi ,beam.dPhi); 
+  
+   G4VisAttributes *vis = new G4VisAttributes();
+   vis->SetColour( G4Colour::Blue() ); 
+
+   G4LogicalVolume *logicBeam = new G4LogicalVolume(beamShape,GetMaterial("G4air"),"logicBeam");
+   logicBeam->SetVisAttributes(vis); 
+
+   new G4PVPlacement(0,                     // rotation relative to mother         
+                     G4ThreeVector(0,0,0),  // position relative to mother           
+                     logicBeam,             // logical object     
+                     "physBeam",            // name of physical placement     
+                     logicMother,           // logical mother       
+                     false,                 // boolean object? (true or false)    
+                     0,                     // copy no   
+                     fCheckOverlaps);       // check overlaps       
+
 }
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMother){
@@ -658,13 +692,13 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // shield box for the target magnetic field 
-   // - material: 1008 steel
-   // - the shield is actually two layers
+   // - Material: 1008 steel
+   // - The shield is actually two layers
    //   - each layer is 0.25" thick
    //   - outer surfaces of layers separated by 1.29" 
    //     => 1.29 - 0.25 = 1.04" center-to-center distance 
    // - Layer 1 = outside layer, Layer 2 = inside layer 
-   // - drawing number: A09016-03-05-0000 
+   // - Drawing number: A09016-03-05-0000 
    
    G4double gap = 1.04*2.54*cm; // 0.52" center-to-center distance 
 
@@ -892,8 +926,8 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMother){
    // ladder plate  
-   // - this comes close to the beam path
-   // - drawing number: A09016-03-04-0601
+   // - This comes close to the beam path
+   // - Drawing number: A09016-03-04-0601
 
    //---- vertical posts along y axis 
    // upstream 
@@ -1233,7 +1267,7 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    // - distance between coils D = 0.5(rmin+rmax), roughly the major radius of the tube   
    //   - coil 1 (placed at -D/2) 
    //   - coil 2 (placed at +D/2)
-   // drawing number: A09016-03-08-0000
+   // - drawing number: A09016-03-08-0000
 
    char partName[14];
    char coilName_n[200],coilName_p[200];   // shape name 
@@ -1458,7 +1492,10 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 }
 //______________________________________________________________________________
 G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
-   // construct the glass cell of the target 
+   // construct the glass cell of the target
+   // FIXME: Check transfer tube coordinates and dimensions (see JT file) 
+   //        - Vertical tubes may be separated by 1.8 in = 2.286 cm  
+   //        - Horizontal tubes may be higher in y than originally determined.  Posts will need to be taller  
 
    //---- pumping chamber ----
    partParameters_t pumpCh;

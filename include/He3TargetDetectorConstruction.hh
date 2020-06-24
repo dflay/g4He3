@@ -91,6 +91,7 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
 
    G4Material *GetMaterial(G4String name);
 
+   void BuildBeam(G4LogicalVolume *logicMother); 
    void BuildPickupCoils(G4LogicalVolume *logicMother);    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
    void BuildShield(G4LogicalVolume *logicMother); 
