@@ -208,7 +208,8 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildHelmholtzCoils(fHelmholtzCoilConfig,"min",logicWorld); 
 
   // shield 
-  BuildShield(logicWorld); 
+  // BuildShield(logicWorld); 
+  BuildShield_new(logicWorld); 
 
   // support ladder 
   BuildLadderPlate(logicWorld);
@@ -691,6 +692,98 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
  
 }
 //______________________________________________________________________________
+void He3TargetDetectorConstruction::BuildShield_new(G4LogicalVolume *logicMother){
+   // shield box for the target magnetic field 
+   // - Material: 1008 steel
+   // - The shield is actually two layers
+   //   - each layer is 0.25" thick
+   //   - outer surfaces of layers separated by 1.29" 
+   //     => 1.29 - 0.25 = 1.04" center-to-center distance 
+   // - Drawing number: A09016-03-05-0000, A09016-03-05-0800
+
+   // constants from drawings  
+   G4double wall = 0.25*2.54*cm;
+   G4double sp   = 0.79*2.54*cm;  // inner-spacing: |<-s->| 
+
+   // get outer box dimensions  
+   partParameters_t pane; 
+   GetPart("shield_panel",pane); 
+
+   // outer box 
+   G4Box *outer = new G4Box("outer"   ,pane.x_len/2.,pane.y_len/2.,pane.z_len/2.);
+   // cut away inner material  
+   G4double xc = pane.x_len - wall*2.; 
+   G4double yc = pane.y_len - wall*2.; 
+   G4double zc = pane.z_len - wall*2.; 
+   G4Box *outerCut = new G4Box("outerCut",xc/2.,yc/2.,zc/2.);
+
+   // subtract the parts 
+   G4SubtractionSolid *outerShield = new G4SubtractionSolid("outerShield",outer,outerCut,0,G4ThreeVector(0,0,0)); 
+
+   // logical volume
+   G4VisAttributes *visOut = new G4VisAttributes();
+   visOut->SetForceWireframe(true); 
+   visOut->SetColour( G4Colour::Magenta() ); 
+   
+   G4LogicalVolume *logicOuter     = new G4LogicalVolume(outerShield,GetMaterial("Stainless_Steel"),"logicOuter");
+   logicOuter->SetVisAttributes(visOut);  
+
+   // inner box 
+   partParameters_t pane_inner = pane; 
+   pane_inner.x_len = pane.x_len - 2.*wall - 2.*sp; 
+   pane_inner.y_len = pane.y_len - 2.*wall - 2.*sp; 
+   pane_inner.z_len = pane.z_len - 2.*wall - 2.*sp; 
+
+   G4Box *inner = new G4Box("inner",pane_inner.x_len/2.,pane_inner.y_len/2.,pane_inner.z_len/2.);
+   // cut away inner material  
+   xc = pane_inner.x_len - wall*2.; 
+   yc = pane_inner.y_len - wall*2.; 
+   zc = pane_inner.z_len - wall*2.; 
+   G4Box *innerCut = new G4Box("innerCut",xc/2.,yc/2.,zc/2.);
+
+   // subtract the parts 
+   G4SubtractionSolid *innerShield = new G4SubtractionSolid("innerShield",inner,innerCut,0,G4ThreeVector(0,0,0)); 
+
+   // logical volume
+   G4VisAttributes *visIn = new G4VisAttributes();
+   visIn->SetForceWireframe(true); 
+   visIn->SetColour( G4Colour::Magenta() ); 
+
+   G4LogicalVolume *logicInner = new G4LogicalVolume(innerShield,GetMaterial("Stainless_Steel"),"logicInner");
+   logicInner->SetVisAttributes(visIn);  
+
+   // place the parts 
+   G4double RY = 55.0*deg;  // FIXME: This angle is still an estimate!  
+
+   G4RotationMatrix *rm = new G4RotationMatrix();
+   rm->rotateX(0.*deg); rm->rotateY(RY); rm->rotateZ(0.*deg);
+
+   G4ThreeVector P = G4ThreeVector(0.*cm,0.*cm,0.*cm); 
+
+   bool isBoolean = true; 
+
+   // outer
+   new G4PVPlacement(rm,                // rotation relative to mother       
+                     P,                 // position relative to mother         
+                     logicOuter,        // logical volume        
+                     "physOuterShield", // physical volume name           
+                     logicMother,       // logical mother     
+                     isBoolean,         // is boolean device? (true or false)    
+                     0,                 // copy number    
+                     fCheckOverlaps);   // check overlaps  
+
+   // inner
+   new G4PVPlacement(rm,                // rotation relative to mother       
+                     P,                 // position relative to mother         
+                     logicInner,        // logical volume        
+                     "physInnerShield", // physical volume name           
+                     logicMother,       // logical mother     
+                     isBoolean,         // is boolean device? (true or false)    
+                     0,                 // copy number    
+                     fCheckOverlaps);   // check overlaps
+
+}
+//______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // shield box for the target magnetic field 
    // - Material: 1008 steel
@@ -699,7 +792,7 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    //   - outer surfaces of layers separated by 1.29" 
    //     => 1.29 - 0.25 = 1.04" center-to-center distance 
    // - Layer 1 = outside layer, Layer 2 = inside layer 
-   // - Drawing number: A09016-03-05-0000 
+   // - Drawing number: A09016-03-05-0000, A09016-03-05-0800
    
    G4double gap = 1.04*2.54*cm; // 0.52" center-to-center distance 
 
@@ -1260,9 +1353,8 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
 void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::string type,
                                                         G4LogicalVolume *logicMother){
    // Helmholtz coils for B fields 
-   // - config: SBS_GEN_677,SBS_GEN_1018, SBS_GEN_368
-   //           677: Eb = 6.77 GeV; 1018: Eb = 10.18 GeV; 368: Eb = 3.68 GeV.  
-   //           Different rotation angle based on Eb  
+   // - config: kSBS_GEN_677, kSBS_GEN_1018, kSBS_GEN_368, kSBS_GEN_146
+   //           Different rotation angle based on index number  
    // - types: maj = large radius coil pair
    //          min = small radius coil pair 
    //          rfy = RF coil pair, aligned along the vertical (y) axis  
@@ -2084,7 +2176,8 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
    return 0;
 }
 //______________________________________________________________________________
-int He3TargetDetectorConstruction::SplitString(const char delim,const std::string inStr,std::vector<std::string> &out){
+int He3TargetDetectorConstruction::SplitString(const char delim,const std::string inStr,
+                                               std::vector<std::string> &out){
    // split a string by a delimiter
    std::stringstream ss(inStr);
    while( ss.good() ){
