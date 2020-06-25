@@ -78,13 +78,13 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
     
     G4LogicalVolume* GetScoringVolume() const { return fScoringVolume; }
    
-    void SetHelmholtzConfig(int x){ fHelmholtzCoilConfig = x; }  // see He3TargetEnumerate for options 
+    void SetEXPConfig(int x){ fEXPConfig = x; }  // see He3TargetEnumerate for options 
 
   protected:
     G4LogicalVolume*  fScoringVolume;
 
   private:
-   int fHelmholtzCoilConfig;  // switch for for helmholz coil angle 
+   int fEXPConfig;  // switch for helmholz coil angle and possibly shield panels  
    bool fDebug,fCheckOverlaps;
    std::vector<partParameters_t> fPartData;
    std::map<G4String,G4Material *> fMaterialsMap;  
@@ -94,7 +94,7 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
    void BuildBeam(G4LogicalVolume *logicMother); 
    void BuildPickupCoils(G4LogicalVolume *logicMother);    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
-   void BuildShield(G4LogicalVolume *logicMother); 
+   void BuildShield(int config,G4LogicalVolume *logicMother); 
    void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
    void BuildHelmholtzCoils(int config,const std::string type,G4LogicalVolume *logicMother); 
    void BuildEndWindow(const std::string type,G4LogicalVolume *logicMother);

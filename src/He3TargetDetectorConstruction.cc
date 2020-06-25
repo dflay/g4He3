@@ -32,7 +32,7 @@
 //______________________________________________________________________________
 He3TargetDetectorConstruction::He3TargetDetectorConstruction()
 : G4VUserDetectorConstruction(),
-  fScoringVolume(0),fHelmholtzCoilConfig(kSBS_GEN_368),fDebug(false),
+  fScoringVolume(0),fEXPConfig(kSBS_GEN_368),fDebug(false),
   fCheckOverlaps(true)
 { }
 //______________________________________________________________________________
@@ -202,13 +202,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildPolarizedHe3(logicGlassCell);
 
   // helmholtz coils
-  fHelmholtzCoilConfig = kSBS_GEN_368;  
-  BuildHelmholtzCoils(fHelmholtzCoilConfig,"maj",logicWorld);  
-  BuildHelmholtzCoils(fHelmholtzCoilConfig,"rfy",logicWorld);  
-  BuildHelmholtzCoils(fHelmholtzCoilConfig,"min",logicWorld); 
+  fEXPConfig = kSBS_GEN_368;  
+  BuildHelmholtzCoils(fEXPConfig,"maj",logicWorld);  
+  BuildHelmholtzCoils(fEXPConfig,"rfy",logicWorld);  
+  BuildHelmholtzCoils(fEXPConfig,"min",logicWorld); 
 
   // shield 
-  BuildShield(logicWorld); 
+  BuildShield(fEXPConfig,logicWorld); 
 
   // support ladder 
   BuildLadderPlate(logicWorld);
@@ -691,9 +691,10 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
  
 }
 //______________________________________________________________________________
-void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
+void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logicMother){
    // shield box for the target magnetic field 
-   // - Material: 1008 steel
+   // - Material: Carbon steel 1008
+   // - config: kSBS_GEN_146, kSBS_GEN_368, kSBS_GEN_677, kSBS_GEN_1018
    // - The shield is actually two layers
    //   - each layer is 0.25" thick
    //   - outer surfaces of layers separated by 1.29" 
@@ -708,6 +709,51 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    partParameters_t sh; 
    GetPart("shield",sh); 
 
+   //---- window cuts
+   // FIXME: these will change!     
+   // downstream, along beam.  sizes are estimates! 
+   G4double xw = 9.48*2.54*cm; 
+   G4double yw = 9.48*2.54*cm; 
+   G4double zw = 9.48*2.54*cm; 
+   G4Box *windowCut_dn = new G4Box("windowCut_dn",xw/2.,yw/2.,zw/2.); 
+   G4ThreeVector Pw_dn = G4ThreeVector(sh.x_len/2.,0.,sh.z_len/3.);  // position of cut 
+
+   // downstream, beam left 
+   // x = 4.62 + ??, y = 28.44", z = 4.62 + ?? 
+   // drawings: A09016-03-05-0851  
+   G4double xw_bl = 15.*2.54*cm; 
+   G4double yw_bl = 28.44*2.54*cm; 
+   G4double zw_bl = 15.*2.54*cm; 
+   G4Box *windowCut_beamLeft_dn = new G4Box("windowCut_beamLeft_dn",xw_bl/2.,yw_bl/2.,zw_bl/2.); 
+   G4ThreeVector Pw_bl_dn       = G4ThreeVector(sh.x_len/2.,0.,0.);  // position of cut 
+
+   // downstream, beam right
+   // FIXME: might be affected by SBS configuration
+   config +=0;  // to get rid of compiler warnings for now 
+   // for now consider a single large cut 
+   // large opening; distance along x and z = panel 1 + door w/handles + panel 3
+   // panel 1
+   // - x = 8.62", y = 21.41", z = 8.82" 
+   // - drawing: A09016-03-05-0811
+   // door with handles  
+   // - x = 16.70", y = 21.41", z = 16.70" 
+   // - drawing: A09016-03-05-0841
+   // panel 3
+   // - x = 5.12", y = 21.41", z = 5.12" 
+   // - drawing: A09016-03-05-0831
+   // total dimensions for cutaway: x = 30.44", y = 21.41", z = 30.44" 
+   G4double xw_br = 30.44*2.54*cm; 
+   G4double yw_br = 21.41*2.54*cm; 
+   G4double zw_br = 30.44*2.54*cm; 
+   G4Box *windowCut_beamRight_dn = new G4Box("windowCut_beamRight_dn",xw_br/2.,yw_br/2.,zw_br/2.); 
+   G4ThreeVector Pw_br_dn        = G4ThreeVector(sh.x_len/3.3,0.,sh.z_len/2.);  // position of cut 
+  
+   // upstream, along beam  
+   G4Box *windowCut_up = new G4Box("windowCut_up",xw/2.,yw/2.,zw/2.); 
+   G4ThreeVector Pw_up = G4ThreeVector(-sh.x_len/2.,0.,-sh.z_len/3.);  // position of cut 
+   
+   //---- shield  
+
    // outer box 
    G4Box *outer = new G4Box("outer"   ,sh.x_len/2.,sh.y_len/2.,sh.z_len/2.);
    // cut away inner material  
@@ -716,29 +762,19 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    G4double zc = sh.z_len - wall*2.; 
    G4Box *outerCut = new G4Box("outerCut",xc/2.,yc/2.,zc/2.);
 
-   // window cut. FIXME: this will change!     
-   G4double xw = 8.*2.54*cm; 
-   G4double yw = 8.*2.54*cm; 
-   G4double zw = 8.*2.54*cm; 
-   // downstream 
-   G4Box *windowCut_dn = new G4Box("windowCut_dn",xw/2.,yw/2.,zw/2.); 
-   G4ThreeVector Pw_dn = G4ThreeVector(sh.x_len/2.,0.,sh.z_len/3.);  // position of cut 
-  
-   // upstream 
-   G4Box *windowCut_up = new G4Box("windowCut_up",xw/2.,yw/2.,zw/2.); 
-   G4ThreeVector Pw_up = G4ThreeVector(-sh.x_len/2.,0.,-sh.z_len/3.);  // position of cut 
-
    // subtract the parts 
    G4SubtractionSolid *outerShield = new G4SubtractionSolid("outerShield_1",outer,outerCut,0,G4ThreeVector(0,0,0));
    outerShield = new G4SubtractionSolid("outerShield_2",outerShield,windowCut_dn,0,Pw_dn); 
+   outerShield = new G4SubtractionSolid("outerShield_3",outerShield,windowCut_beamLeft_dn,0,Pw_bl_dn); 
+   outerShield = new G4SubtractionSolid("outerShield_4",outerShield,windowCut_beamRight_dn,0,Pw_br_dn); 
    outerShield = new G4SubtractionSolid("outerShield"  ,outerShield,windowCut_up,0,Pw_up); 
 
    // logical volume
    G4VisAttributes *visOut = new G4VisAttributes();
-   visOut->SetForceWireframe(true); 
+   // visOut->SetForceWireframe(true); 
    visOut->SetColour( G4Colour::Magenta() ); 
    
-   G4LogicalVolume *logicOuter     = new G4LogicalVolume(outerShield,GetMaterial("Stainless_Steel"),"logicOuter");
+   G4LogicalVolume *logicOuter     = new G4LogicalVolume(outerShield,GetMaterial("Carbon_Steel_1008"),"logicOuter");
    logicOuter->SetVisAttributes(visOut);  
 
    // inner box 
@@ -757,14 +793,16 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    // subtract the parts 
    G4SubtractionSolid *innerShield = new G4SubtractionSolid("innerShield_1",inner,innerCut,0,G4ThreeVector(0,0,0)); 
    innerShield = new G4SubtractionSolid("innerShield_2",innerShield,windowCut_dn,0,Pw_dn); 
+   innerShield = new G4SubtractionSolid("innerShield_3",innerShield,windowCut_beamLeft_dn,0,Pw_bl_dn); 
+   innerShield = new G4SubtractionSolid("innerShield_4",innerShield,windowCut_beamRight_dn,0,Pw_br_dn); 
    innerShield = new G4SubtractionSolid("innerShield",innerShield,windowCut_up,0,Pw_up); 
 
    // logical volume
    G4VisAttributes *visIn = new G4VisAttributes();
-   visIn->SetForceWireframe(true); 
+   // visIn->SetForceWireframe(true); 
    visIn->SetColour( G4Colour::Magenta() ); 
 
-   G4LogicalVolume *logicInner = new G4LogicalVolume(innerShield,GetMaterial("Stainless_Steel"),"logicInner");
+   G4LogicalVolume *logicInner = new G4LogicalVolume(innerShield,GetMaterial("Carbon_Steel_1008"),"logicInner");
    logicInner->SetVisAttributes(visIn);  
 
    // place the parts 
@@ -781,7 +819,7 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    new G4PVPlacement(rm,                // rotation relative to mother       
                      P,                 // position relative to mother         
                      logicOuter,        // logical volume        
-                     "physOuterShield", // physical volume name           
+                     "physShieldOuter", // physical volume name           
                      logicMother,       // logical mother     
                      isBoolean,         // is boolean device? (true or false)    
                      0,                 // copy number    
@@ -791,7 +829,7 @@ void He3TargetDetectorConstruction::BuildShield(G4LogicalVolume *logicMother){
    new G4PVPlacement(rm,                // rotation relative to mother       
                      P,                 // position relative to mother         
                      logicInner,        // logical volume        
-                     "physInnerShield", // physical volume name           
+                     "physShieldInner", // physical volume name           
                      logicMother,       // logical mother     
                      isBoolean,         // is boolean device? (true or false)    
                      0,                 // copy number    
@@ -931,39 +969,81 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
 
    //---- coil mount [upstream, beam left] 
    // note: the subtraction dimensions are estimates at best  
-   partParameters_t cmul; 
-   GetPart("pu_coil_mnt",cmul);
+   partParameters_t cbul; 
+   GetPart("pu_coil_base",cbul);
 
-   G4Box *coilMount = new G4Box("cmul",cmul.x_len/2.,cmul.y_len/2.,cmul.z_len/2.); 
+   G4Box *coilB = new G4Box("coilB",cbul.x_len/2.,cbul.y_len/2.,cbul.z_len/2.); 
 
-   G4ThreeVector P_ul = G4ThreeVector(cmul.x,cmul.y,cmul.z);  
-   G4RotationMatrix *rm = new G4RotationMatrix(); 
-   rm->rotateX(cmul.rx); rm->rotateY(cmul.ry); rm->rotateZ(cmul.rz);   
 
-   // create a *subtraction* with a component that is 1/2 the length and height of the block 
-   G4double xlen = 2.*cmul.x_len;  // far exceed the thickness to make sure it's a cutaway 
-   G4double ylen = cmul.y_len/2.;
-   G4double zlen = cmul.z_len/3.;
+   // U-cut: create a *subtraction* with a component for a U shape  
+   G4double xlen = 2.*cbul.x_len;  // far exceed the thickness to make sure it's a cutaway 
+   G4double ylen = 2.*1.3*cm; // cmul.y_len/2.;
+   G4double zlen = 3.2*cm; // cmul.z_len/3.;
 
-   G4Box *cut = new G4Box("cut",xlen/2.,ylen/2.,zlen/2.);
+   G4Box *Ucut = new G4Box("Ucut",xlen/2.,ylen/2.,zlen/2.);
 
    // do the subtraction 
-   G4ThreeVector Psub = G4ThreeVector(0,ylen,0.);  // centers the second volume relative to the first 
-   G4SubtractionSolid *puMount = new G4SubtractionSolid("pum",coilMount,cut,0,Psub); 
+   G4ThreeVector Psub = G4ThreeVector(0,1.1*cm+ylen/2.,0.);  // centers the second volume relative to the first 
+   G4SubtractionSolid *coilBase = new G4SubtractionSolid("coilMount",coilB,Ucut,0,Psub); 
+ 
+   // now the coil itself 
+   partParameters_t pu;
+   GetPart("pu_coil",pu); 
+
+   G4Box *coilOuter = new G4Box("coilOuter",pu.x_len/2.,pu.y_len/2.,pu.z_len/2.);
+
+   // create a cutaway that actually defines the coil since the initial dimensions are the OUTER values 
+   G4double xc = 2.*pu.x_len; // cut straight through in this dimension  
+   G4double yc = pu.y_len - 2.*0.5*cm;  
+   G4double zc = pu.z_len - 2.*0.5*cm; 
+   
+   G4Box *coilCut = new G4Box("coilCut",xc/2.,yc/2.,zc/2.); 
+   
+   // subtraction; no coordinates needed since we're cutting straight through 
+   G4SubtractionSolid *coil = new G4SubtractionSolid("coil",coilOuter,coilCut);
+
+   // ok, now we use the *coil* to do a cut on the coil mount (this is where the coil will sit)
+   partParameters_t cmul; 
+   GetPart("pu_coil_mnt",cmul);
+   
+   G4Box *coilMnt = new G4Box("cmnt",cmul.x_len/2.+pu.x_len/2.,cmul.y_len/2.,cmul.z_len/2.); 
+
+   // need to locate the coil properly
+   xc = cmul.x_len/2.;  
+   yc = 0.*cm; 
+   zc = 0.*cm; 
+   G4ThreeVector Pc = G4ThreeVector(xc,yc,zc);
+   G4SubtractionSolid *coilMount = new G4SubtractionSolid("coilMount",coilMnt,coil,0,Pc); 
+
+   // now create a union of the coil base and coil mount
+   G4ThreeVector Pm = G4ThreeVector((cmul.x_len+cbul.x_len)/2.,0.9*cm,0.*cm);  
+   G4UnionSolid *coilBMNT = new G4UnionSolid("coilBMNT",coilBase,coilMount,0,Pm); 
   
    G4VisAttributes *vis = new G4VisAttributes();
    vis->SetColour( G4Colour::Magenta() );  
    // vis->SetForceWireframe(true);  
 
-   G4LogicalVolume *logicCoilMNT = new G4LogicalVolume(puMount,GetMaterial("Aluminum"),"logicCoilMNT");
-   logicCoilMNT->SetVisAttributes(vis); 
+   G4LogicalVolume *logicCoilBMNT = new G4LogicalVolume(coilBMNT,GetMaterial("Aluminum"),"logicCoilBMNT");
+   logicCoilBMNT->SetVisAttributes(vis); 
 
    bool isBoolean = true;  // not sure what this really does...  
 
+   // FIXME: constraints come from JT file; is the 3.5 cm correct?
+   G4double xbm = 0.5*(3.5*cm) + cmul.x_len/2. + cbul.x_len/2. + pu.x_len/2.; 
+   G4double ybm = -0.9*cm; // placement relative to BEAM
+   G4double zbm = 7.2*cm; 
+   
+   G4ThreeVector P_ul = G4ThreeVector(xbm,ybm,zbm);
+   G4RotationMatrix *rm = new G4RotationMatrix(); 
+   rm->rotateX(0); rm->rotateY(0); rm->rotateZ(0);   
+
+   G4RotationMatrix *rm180 = new G4RotationMatrix(); 
+   rm180->rotateX(0); rm180->rotateY(180*deg); rm180->rotateZ(0);   
+
    // beam left
-   new G4PVPlacement(rm,                  // rotation [relative to mother]             
+   new G4PVPlacement(rm180,               // rotation [relative to mother]             
                      P_ul,                // position [relative to mother]          
-                     logicCoilMNT,        // logical volume                            
+                     logicCoilBMNT,       // logical volume                            
                      "physPUCoilMNT_ubl", // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations (true, false) 
@@ -971,11 +1051,11 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
                      fCheckOverlaps);     // check overlaps                         
 
    // beam right 
-   G4ThreeVector P_ur = G4ThreeVector(-cmul.x,cmul.y,cmul.z);
+   G4ThreeVector P_ur = G4ThreeVector(-xbm,ybm,zbm);
 
    new G4PVPlacement(rm,                  // rotation [relative to mother]             
                      P_ur,                // position [relative to mother]          
-                     logicCoilMNT,        // logical volume                            
+                     logicCoilBMNT,       // logical volume                            
                      "physPUCoilMNT_ubr", // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations                   
@@ -983,12 +1063,12 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
                      fCheckOverlaps);     // check overlaps                         
 
    //---- downstream 
-   G4ThreeVector P_dl = G4ThreeVector(cmul.x,cmul.y,-cmul.z);
+   G4ThreeVector P_dl = G4ThreeVector(xbm,ybm,-zbm);
 
    // beam left
-   new G4PVPlacement(rm,                  // rotation [relative to mother]             
+   new G4PVPlacement(rm180,               // rotation [relative to mother]             
                      P_dl,                // position [relative to mother]          
-                     logicCoilMNT,        // logical volume                            
+                     logicCoilBMNT,       // logical volume                            
                      "physPUCoilMNT_dbl", // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations (true, false)
@@ -996,11 +1076,11 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
                      fCheckOverlaps);     // check overlaps                         
 
    // beam right 
-   G4ThreeVector P_dr = G4ThreeVector(-cmul.x,cmul.y,-cmul.z);
+   G4ThreeVector P_dr = G4ThreeVector(-xbm,ybm,-zbm);
 
    new G4PVPlacement(rm,                  // rotation [relative to mother]             
                      P_dr,                // position [relative to mother]          
-                     logicCoilMNT,        // logical volume                            
+                     logicCoilBMNT,       // logical volume                            
                      "physPUCoilMNT_dbr", // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations (true, false)
@@ -1008,122 +1088,59 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
                      fCheckOverlaps);     // check overlaps                         
 
    //---- pickup coil
-   // upstream elbow  
-   partParameters_t ceu; 
-   GetPart("pu_coil_elbow",ceu);
-
-   G4Torus *coilElbow_u = new G4Torus("ceu",
-                                      ceu.r_min   ,ceu.r_max,ceu.r_tor, 
-                                      ceu.startPhi,ceu.dPhi); 
-
-   // G4ThreeVector Peu = G4ThreeVector(ceu.x,ceu.y,ceu.z);
-
-   // tube above  
-   partParameters_t cta; 
-   GetPart("pu_coil_tube",cta); 
-   
-   G4Tubs *coilTube_a = new G4Tubs("cta",
-                                   cta.r_min    ,cta.r_max,
-                                   cta.length/2.,
-                                   cta.startPhi ,cta.dPhi);
-
-   // G4ThreeVector Pta = G4ThreeVector(0,ceu.r_tor,cta.length/2);  // relative to elbow!
-
-   // tube below 
-   partParameters_t ctb = cta; 
-   ctb.y *= -1.;
-
-   G4Tubs *coilTube_b = new G4Tubs("ctb",
-                                   ctb.r_min    ,ctb.r_max,
-                                   ctb.length/2.,
-                                   ctb.startPhi ,ctb.dPhi);
-   
+   G4VisAttributes *visCoil = new G4VisAttributes(); 
+   visCoil->SetColour( G4Colour(255,140,0) );  // dark orange
  
-   // downstream elbow; attach to downstream end of tube  
-   partParameters_t ced = ceu; 
-   ced.z   = cta.length; 
-   ced.rx  *= -1.;   // reflect about the x axis  
+   G4LogicalVolume *logicCoil = new G4LogicalVolume(coil,GetMaterial("Copper"),"logicCoil");
+   logicCoil->SetVisAttributes(visCoil);
 
-   G4Torus *coilElbow_d = new G4Torus("ced",
-                                      ced.r_min   ,ced.r_max,ced.r_tor, 
-                                      ced.startPhi,ced.dPhi); 
-
-   // G4ThreeVector Ped = G4ThreeVector(ced.x,ced.y,ced.z);
-
-   // position and rotation of upstream elbow relative to top tube   
-   G4ThreeVector PPu = G4ThreeVector(0.,-ceu.r_tor,-cta.length/2);
-   G4RotationMatrix *rm_u = new G4RotationMatrix();
-   rm_u->rotateX(ceu.rx); rm_u->rotateY(ceu.ry); rm_u->rotateZ(ceu.rz);  
-
-   // position and rotation of downstream elbow relative to top tube   
-   G4ThreeVector PPd = G4ThreeVector(0.,-ceu.r_tor,cta.length/2);
-   G4RotationMatrix *rm_d = new G4RotationMatrix();
-   rm_d->rotateX(ced.rx); rm_d->rotateY(ced.ry); rm_d->rotateZ(ced.rz);  
-  
-   // position of lower tube relative to top tube  
-   G4ThreeVector Ptb = G4ThreeVector(0,-2.*ceu.r_tor,0);
-
-   // union all parts 
-   G4UnionSolid *pickupCoil; 
-   pickupCoil = new G4UnionSolid("pu_euta"   ,coilTube_a,coilElbow_u,rm_u,PPu); 
-   pickupCoil = new G4UnionSolid("pu_euta_ed",pickupCoil,coilTube_b ,0   ,Ptb); 
-   pickupCoil = new G4UnionSolid("pu"        ,pickupCoil,coilElbow_d,rm_d,PPd);
-
-   G4VisAttributes *visPU = new G4VisAttributes(); 
-   visPU->SetColour( G4Colour(255,140,0) );  // dark orange
-   // visPU->SetForceWireframe(true); 
-
-   G4LogicalVolume *logicPU = new G4LogicalVolume(pickupCoil,GetMaterial("Copper"),"logicPU");
-   logicPU->SetVisAttributes(visPU); 
+   // place it to be flush against the mount assembly 
+   G4double xbm_c = xbm - pu.x_len - cmul.x_len; 
+   G4double ybm_c = 0.*cm;  // remember, centering on the beam 
+   G4ThreeVector P_pul = G4ThreeVector(xbm_c,ybm_c,zbm); 
 
    // beam left
-
-   G4double x_pu = cmul.x - cmul.x_len/2. - cta.r_max;  
-   G4double y_pu = cmul.y;  
-   G4double z_pu = cmul.z;  
-   G4ThreeVector P_pul = G4ThreeVector(x_pu,y_pu,z_pu);
-
-   new G4PVPlacement(0,                   // rotation [relative to mother]             
+   new G4PVPlacement(rm180,               // rotation [relative to mother]             
                      P_pul,               // position [relative to mother]          
-                     logicPU,             // logical volume                            
-                     "physPU_ubl",        // name                                       
+                     logicCoil,           // logical volume                            
+                     "physPUCoil_ubl",    // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations (true, false) 
                      0,                   // copy number                          
                      fCheckOverlaps);     // check overlaps                         
 
    // beam right 
-   G4ThreeVector P_pur = G4ThreeVector(-x_pu,y_pu,z_pu);
+   G4ThreeVector P_pur = G4ThreeVector(-xbm_c,ybm_c,zbm);
 
-   new G4PVPlacement(0,                   // rotation [relative to mother]             
+   new G4PVPlacement(rm,                  // rotation [relative to mother]             
                      P_pur,               // position [relative to mother]          
-                     logicPU,             // logical volume                            
-                     "physPU_ubr",        // name                                       
+                     logicCoil,           // logical volume                            
+                     "physPUCoil_ubr",    // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations                   
                      1,                   // copy number                          
                      fCheckOverlaps);     // check overlaps                         
 
    //---- downstream 
-   G4ThreeVector P_pdl = G4ThreeVector(x_pu,y_pu,-z_pu);
+   G4ThreeVector P_pdl = G4ThreeVector(xbm_c,ybm_c,-zbm);
 
    // beam left
-   new G4PVPlacement(0,                  // rotation [relative to mother]             
-                     P_pdl,                // position [relative to mother]          
-                     logicPU,             // logical volume                            
-                     "physPU_dbl",        // name                                       
+   new G4PVPlacement(rm180,               // rotation [relative to mother]             
+                     P_pdl,               // position [relative to mother]          
+                     logicCoil,           // logical volume                            
+                     "physPUCoil_dbl",    // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations (true, false)
                      2,                   // copy number                          
                      fCheckOverlaps);     // check overlaps                         
 
    // beam right 
-   G4ThreeVector P_pdr = G4ThreeVector(-x_pu,y_pu,-z_pu);
+   G4ThreeVector P_pdr = G4ThreeVector(-xbm_c,ybm_c,-zbm);
 
-   new G4PVPlacement(0,                   // rotation [relative to mother]             
+   new G4PVPlacement(rm,                  // rotation [relative to mother]             
                      P_pdr,               // position [relative to mother]          
-                     logicPU,             // logical volume                            
-                     "physPU_dbr",        // name                                       
+                     logicCoil,           // logical volume                            
+                     "physPUCoil_dbr",    // name                                       
                      logicMother,         // logical mother volume                   
                      isBoolean,           // boolean operations (true, false)
                      3,                   // copy number                          
@@ -1737,6 +1754,10 @@ int He3TargetDetectorConstruction::ConstructMaterials(){
    G4Element *elSr = nist->FindOrBuildElement("Sr");
    G4Element *elBa = nist->FindOrBuildElement("Ba");
    G4Element *elCu = nist->FindOrBuildElement("Cu");
+   G4Element *elMn = nist->FindOrBuildElement("Mn"); 
+   G4Element *elFe = nist->FindOrBuildElement("Fe"); 
+   G4Element *elS  = nist->FindOrBuildElement("S"); 
+   G4Element *elP  = nist->FindOrBuildElement("P"); 
 
    // Cu
    G4Material *Cu = new G4Material("Copper",8.96*g/cm3,1.); 
@@ -1803,6 +1824,18 @@ int He3TargetDetectorConstruction::ConstructMaterials(){
    // for the support materials 
    G4Material *Steel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
    fMaterialsMap["Stainless_Steel"] = Steel; 
+
+   // AISI 1008 carbon steel
+   // details from https://www.azom.com/article.aspx?ArticleID=6538
+   // assuming the composition with 0.06% C, 0.38% Mn, 0.01% Si for a density of 7.782*g/cm3   
+   G4Material *Carbon_Steel_1008 = new G4Material("Carbon_Steel_1008",7.872*g/cm3,6); 
+   Carbon_Steel_1008->AddElement(elFe,0.9905); // avg of 0.9931 and 0.9970  
+   Carbon_Steel_1008->AddElement(elMn,0.0038);  
+   Carbon_Steel_1008->AddElement(elC ,0.0006); 
+   Carbon_Steel_1008->AddElement(elS ,0.0005); 
+   Carbon_Steel_1008->AddElement(elP ,0.0004); 
+   Carbon_Steel_1008->AddElement(elSi,0.0001); 
+   fMaterialsMap["Carbon_Steel_1008"] = Carbon_Steel_1008; 
 
    // print for confirmation
    if(fDebug){
