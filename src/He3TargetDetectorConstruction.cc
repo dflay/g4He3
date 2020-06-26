@@ -841,6 +841,9 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    // ladder plate  
    // - This comes close to the beam path
    // - Drawing number: A09016-03-04-0601
+   G4double x0 = -0.438*2.54*cm; // beam right from JT model  
+   G4double y0 = -5.33*cm;       // low according to JT model
+   G4double z0 = 1.5*2.54*cm;   // downstream according to JT model   
 
    //---- vertical posts along y axis 
    // upstream 
@@ -943,9 +946,9 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    G4LogicalVolume *logicLadder = new G4LogicalVolume(ladder,GetMaterial("Aluminum"),"logicLadder"); 
    logicLadder->SetVisAttributes(vis); 
 
-   G4double lx = lvu.x; // FIXME: 5 cm beam right
-   G4double ly = lvu.y; 
-   G4double lz = lvu.z; 
+   G4double lx = x0; 
+   G4double ly = y0;  
+   G4double lz = lvu.z + z0; 
     
    G4ThreeVector P_l      = G4ThreeVector(lx,ly,lz);   
    G4RotationMatrix *rm_l = new G4RotationMatrix();
@@ -965,7 +968,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
 void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMother){
    // Pickup coils used to determine polarization of 3He (NMR, EPR) 
    // - Dimensions based on JT model
-   // FIXME: Update dimensions 
+   // - global y offset: pickup coils sit 1.1" below the target cell (measured from top of coil mount)
+   G4double y0 = -1.1*2.54*cm - 1.5*cm;  // 1.5 cm accounts for center of coil mount  
 
    //---- coil mount [upstream, beam left] 
    // note: the subtraction dimensions are estimates at best  
@@ -992,12 +996,14 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
 
    G4Box *coilOuter = new G4Box("coilOuter",pu.x_len/2.,pu.y_len/2.,pu.z_len/2.);
 
+   std::cout << "PU COIL THICKNESS = " << pu.x_len/cm << " cm" << std::endl;
+
    // create a cutaway that actually defines the coil since the initial dimensions are the OUTER values 
    G4double xc = 2.*pu.x_len; // cut straight through in this dimension  
    G4double yc = pu.y_len - 2.*0.5*cm;  
    G4double zc = pu.z_len - 2.*0.5*cm; 
    
-   G4Box *coilCut = new G4Box("coilCut",xc/2.,yc/2.,zc/2.); 
+   G4Box *coilCut = new G4Box("coilCut",xc,yc/2.,zc/2.); 
    
    // subtraction; no coordinates needed since we're centered on the outer coil  
    G4SubtractionSolid *coil = new G4SubtractionSolid("coil",coilOuter,coilCut);
@@ -1033,7 +1039,7 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
 
    // FIXME: constraints come from JT file; is the 2.5 cm correct?
    G4double xbm = (2.5*cm)/2. + cbul.x_len/2. +  cmul.x_len + pu.x_len; 
-   G4double ybm = -0.9*cm; // placement relative to BEAM
+   G4double ybm = -0.9*cm + y0; // placement relative to BEAM 
    G4double zbm = 7.2*cm; 
    
    G4ThreeVector P_ul = G4ThreeVector(xbm,ybm,zbm);
@@ -1098,8 +1104,8 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
    logicCoil->SetVisAttributes(visCoil);
 
    // place it to be flush against the mount assembly 
-   G4double xbm_c = xbm - pu.x_len - cmul.x_len; 
-   G4double ybm_c = 0.*cm;  // remember, centering on the beam 
+   G4double xbm_c = xbm - pu.x_len/2. - cmul.x_len; 
+   G4double ybm_c = y0;   
    G4ThreeVector P_pul = G4ThreeVector(xbm_c,ybm_c,zbm); 
 
    // beam left
