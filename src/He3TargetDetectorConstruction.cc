@@ -999,24 +999,27 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
    
    G4Box *coilCut = new G4Box("coilCut",xc/2.,yc/2.,zc/2.); 
    
-   // subtraction; no coordinates needed since we're cutting straight through 
+   // subtraction; no coordinates needed since we're centered on the outer coil  
    G4SubtractionSolid *coil = new G4SubtractionSolid("coil",coilOuter,coilCut);
 
    // ok, now we use the *coil* to do a cut on the coil mount (this is where the coil will sit)
    partParameters_t cmul; 
    GetPart("pu_coil_mnt",cmul);
    
-   G4Box *coilMnt = new G4Box("cmnt",cmul.x_len/2.+pu.x_len/2.,cmul.y_len/2.,cmul.z_len/2.); 
+   G4Box *coilMnt = new G4Box("cmnt",cmul.x_len/2.,cmul.y_len/2.,cmul.z_len/2.); 
 
    // need to locate the coil properly
-   xc = cmul.x_len/2.;  
+   xc = pu.x_len/2.;  
    yc = 0.*cm; 
    zc = 0.*cm; 
    G4ThreeVector Pc = G4ThreeVector(xc,yc,zc);
    G4SubtractionSolid *coilMount = new G4SubtractionSolid("coilMount",coilMnt,coil,0,Pc); 
 
    // now create a union of the coil base and coil mount
-   G4ThreeVector Pm = G4ThreeVector((cmul.x_len+cbul.x_len)/2.,0.9*cm,0.*cm);  
+   G4double xm = cbul.x_len/2. + cmul.x_len/2.; 
+   G4double ym = 0.9*cm; 
+   G4double zm = 0.*cm;  
+   G4ThreeVector Pm = G4ThreeVector(xm,ym,zm);  
    G4UnionSolid *coilBMNT = new G4UnionSolid("coilBMNT",coilBase,coilMount,0,Pm); 
   
    G4VisAttributes *vis = new G4VisAttributes();
@@ -1028,8 +1031,8 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
 
    bool isBoolean = true;  // not sure what this really does...  
 
-   // FIXME: constraints come from JT file; is the 3.5 cm correct?
-   G4double xbm = 0.5*(3.5*cm) + cmul.x_len/2. + cbul.x_len/2. + pu.x_len/2.; 
+   // FIXME: constraints come from JT file; is the 2.5 cm correct?
+   G4double xbm = (2.5*cm)/2. + cbul.x_len/2. +  cmul.x_len + pu.x_len; 
    G4double ybm = -0.9*cm; // placement relative to BEAM
    G4double zbm = 7.2*cm; 
    
