@@ -717,15 +717,32 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
    G4double zw = 9.48*2.54*cm; 
    G4Box *windowCut_dn = new G4Box("windowCut_dn",xw/2.,yw/2.,zw/2.); 
    G4ThreeVector Pw_dn = G4ThreeVector(sh.x_len/2.,0.,sh.z_len/3.);  // position of cut 
+   
+   G4double door = 40.5*2.54*cm; // for OWU2A door panel (from JT model)  
 
    // downstream, beam left 
    // x = 4.62 + ??, y = 28.44", z = 4.62 + ?? 
    // drawings: A09016-03-05-0851  
-   G4double xw_bl = 15.*2.54*cm; 
-   G4double yw_bl = 28.44*2.54*cm; 
-   G4double zw_bl = 15.*2.54*cm; 
+   // cut as of 6/27/20 (new design from Bert); comments are old design 
+
+   // old 
+   // G4double xw_bl = 15.*2.54*cm; 
+   // G4double yw_bl = 28.44*2.54*cm; 
+   // G4double zw_bl = 15.*2.54*cm; 
+   // G4ThreeVector Pw_bl_dn = G4ThreeVector(sh.x_len/2.,0.,0.);  // position of cut 
+
+   // new cut as of 6/27/20 (new design from Bert)
+   G4double xw_bl = 10.*cm; // arbitrary size
+   G4double yw_bl = 0.8*sh.y_len; 
+   G4double zw_bl = door; 
+
+   // coordinates 
+   G4double xs = sh.x_len/2.; // distance to midpoint of door, aligns door close to edge 
+   G4double ys = (-1.)*(sh.y_len/2.-yw_bl/2.);          // this should center the cut properly  
+   G4double zs = -zw_bl/2.; // right on top of the right side wall (before rotation)  
+   G4ThreeVector Pw_bl_dn = G4ThreeVector(xs,ys,zs);  // position of cut 
+  
    G4Box *windowCut_beamLeft_dn = new G4Box("windowCut_beamLeft_dn",xw_bl/2.,yw_bl/2.,zw_bl/2.); 
-   G4ThreeVector Pw_bl_dn       = G4ThreeVector(sh.x_len/2.,0.,0.);  // position of cut 
 
    // downstream, beam right
    // FIXME: might be affected by SBS configuration
@@ -733,20 +750,42 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
    // for now consider a single large cut 
    // large opening; distance along x and z = panel 1 + door w/handles + panel 3
    // panel 1
-   // - x = 8.62", y = 21.41", z = 8.82" 
+   // - x = 8.62", y = 21.41", z = 8.62" 
    // - drawing: A09016-03-05-0811
+   // panel 2 
+   // - x = 6.62", y = 21.41", z = 6.62" 
    // door with handles  
    // - x = 16.70", y = 21.41", z = 16.70" 
    // - drawing: A09016-03-05-0841
    // panel 3
    // - x = 5.12", y = 21.41", z = 5.12" 
    // - drawing: A09016-03-05-0831
-   // total dimensions for cutaway: x = 30.44", y = 21.41", z = 30.44" 
-   G4double xw_br = 30.44*2.54*cm; 
-   G4double yw_br = 21.41*2.54*cm; 
-   G4double zw_br = 30.44*2.54*cm; 
+   // G4double p1 = 8.62*2.54*cm; 
+   // G4double p2 = 6.62*2.54*cm; 
+   // G4double p3 = 5.12*2.54*cm; 
+   // G4double dh = 16.70*2.54*cm; 
+   // G4double T  = p1+p2+p3+dh;  // total cutaway size 
+
+   // old 
+   // G4double xw_br = T; 
+   // G4double yw_br = 21.41*2.54*cm; 
+   // G4double zw_br = 5.*cm; // arbitray size
+   // // coordinates 
+   // G4double xs = sh.x_len/2. - xw_br/2. - 2.*cm; // distance to midpoint of door, aligns door close to edge 
+   // G4double ys = (-1.)*(sh.y_len/2.-yw_br/2.);  // this should center the cut properly  
+   // G4double zs = sh.z_len/2.; // right on top of the right side wall (before rotation)  
+ 
+   // cut as of 6/27/20 (new design from Bert)  
+   G4double xw_br = door; 
+   G4double yw_br = 0.8*sh.y_len; 
+   G4double zw_br = 10.*cm; 
+   // coordinates 
+   xs = sh.x_len/2. - door/2. - 5.*cm; // distance to midpoint of door, aligns door close to edge 
+   ys = (-1.)*(sh.y_len/2.-yw_br/2.);  // this should center the cut properly  
+   zs = sh.z_len/2.; // right on top of the right side wall (before rotation)  
+ 
    G4Box *windowCut_beamRight_dn = new G4Box("windowCut_beamRight_dn",xw_br/2.,yw_br/2.,zw_br/2.); 
-   G4ThreeVector Pw_br_dn        = G4ThreeVector(sh.x_len/3.3,0.,sh.z_len/2.);  // position of cut 
+   G4ThreeVector Pw_br_dn        = G4ThreeVector(xs,ys,zs);  // position of cut 
   
    // upstream, along beam  
    G4Box *windowCut_up = new G4Box("windowCut_up",xw/2.,yw/2.,zw/2.); 
