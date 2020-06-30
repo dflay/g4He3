@@ -832,7 +832,7 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
    G4Box *windowCut_up = new G4Box("windowCut_up",xw/2.,yw/2.,zw/2.); 
    G4ThreeVector Pw_up = G4ThreeVector(-sh.x_len/2.,0.,-sh.z_len/3.);  // position of cut 
    
-   //---- shield  
+   //---- shield: put everything together   
 
    // outer box 
    G4Box *outer = new G4Box("outer"   ,sh.x_len/2.,sh.y_len/2.,sh.z_len/2.);
@@ -844,18 +844,10 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
 
    // subtract the parts 
    G4SubtractionSolid *outerShield = new G4SubtractionSolid("outerShield_1",outer,outerCut,0,G4ThreeVector(0,0,0));
-   outerShield = new G4SubtractionSolid("outerShield_2",outerShield,windowCut_dn,0,Pw_dn); 
-   outerShield = new G4SubtractionSolid("outerShield_3",outerShield,windowCut_beamLeft_dn,0,Pw_bl_dn); 
+   outerShield = new G4SubtractionSolid("outerShield_2",outerShield,windowCut_dn,          0,Pw_dn   ); 
+   outerShield = new G4SubtractionSolid("outerShield_3",outerShield,windowCut_beamLeft_dn ,0,Pw_bl_dn); 
    outerShield = new G4SubtractionSolid("outerShield_4",outerShield,windowCut_beamRight_dn,0,Pw_br_dn); 
-   outerShield = new G4SubtractionSolid("outerShield"  ,outerShield,windowCut_up,0,Pw_up); 
-
-   // logical volume
-   G4VisAttributes *visOut = new G4VisAttributes();
-   // visOut->SetForceWireframe(true); 
-   visOut->SetColour( G4Colour::Magenta() ); 
-   
-   G4LogicalVolume *logicOuter     = new G4LogicalVolume(outerShield,GetMaterial("Carbon_Steel_1008"),"logicOuter");
-   logicOuter->SetVisAttributes(visOut);  
+   outerShield = new G4SubtractionSolid("outerShield"  ,outerShield,windowCut_up          ,0,Pw_up   ); 
 
    // inner box 
    partParameters_t sh_inner = sh; 
@@ -872,52 +864,41 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
 
    // subtract the parts 
    G4SubtractionSolid *innerShield = new G4SubtractionSolid("innerShield_1",inner,innerCut,0,G4ThreeVector(0,0,0)); 
-   innerShield = new G4SubtractionSolid("innerShield_2",innerShield,windowCut_dn,0,Pw_dn); 
-   innerShield = new G4SubtractionSolid("innerShield_3",innerShield,windowCut_beamLeft_dn,0,Pw_bl_dn); 
+   innerShield = new G4SubtractionSolid("innerShield_2",innerShield,windowCut_dn          ,0,Pw_dn   ); 
+   innerShield = new G4SubtractionSolid("innerShield_3",innerShield,windowCut_beamLeft_dn ,0,Pw_bl_dn); 
    innerShield = new G4SubtractionSolid("innerShield_4",innerShield,windowCut_beamRight_dn,0,Pw_br_dn); 
-   innerShield = new G4SubtractionSolid("innerShield",innerShield,windowCut_up,0,Pw_up); 
+   innerShield = new G4SubtractionSolid("innerShield"  ,innerShield,windowCut_up          ,0,Pw_up   ); 
 
    // accumulate into a single logical volume object 
    fLogicShield[0] = new G4LogicalVolume(innerShield,GetMaterial("Carbon_Steel_1008"),"logicShield");  
    fLogicShield[1] = new G4LogicalVolume(outerShield,GetMaterial("Carbon_Steel_1008"),"logicShield");  
 
-   // logical volume
    G4VisAttributes *vis = new G4VisAttributes();
-   // vis->SetForceWireframe(true); 
    vis->SetColour( G4Colour::Magenta() ); 
+   // vis->SetForceWireframe(true); 
 
-   // G4LogicalVolume *logicInner = new G4LogicalVolume(innerShield,GetMaterial("Carbon_Steel_1008"),"logicInner");
-   for(int i=0;i<2;i++) fLogicShield[i]->SetVisAttributes(vis);  
-
-   // place the parts 
+   // rotation angle 
    G4double RY = 55.0*deg;  // FIXME: This angle is still an estimate!  
-
-   G4RotationMatrix *rm = new G4RotationMatrix();
-   rm->rotateX(0.*deg); rm->rotateY(RY); rm->rotateZ(0.*deg);
-
-   G4ThreeVector P = G4ThreeVector(0.*cm,0.*cm,0.*cm); 
 
    bool isBoolean = true; 
 
-   // inner 
-   new G4PVPlacement(rm,                // rotation relative to mother       
-                     P,                 // position relative to mother         
-                     fLogicShield[0],   // logical volume        
-                     "physShield",      // physical volume name           
-                     logicMother,       // logical mother     
-                     isBoolean,         // is boolean device? (true or false)    
-                     0,                 // copy number    
-                     fCheckOverlaps);   // check overlaps  
-
-   // outer
-   new G4PVPlacement(rm,                // rotation relative to mother       
-                     P,                 // position relative to mother         
-                     fLogicShield[1],   // logical volume        
-                     "physShield",      // physical volume name           
-                     logicMother,       // logical mother     
-                     isBoolean,         // is boolean device? (true or false)    
-                     1,                 // copy number    
-                     fCheckOverlaps);   // check overlaps  
+   // placement 
+   for(int i=0;i<2;i++){
+      // visualization 
+      fLogicShield[i]->SetVisAttributes(vis);  
+      // rotation
+      G4RotationMatrix *rm = new G4RotationMatrix();
+      rm->rotateX(0.*deg); rm->rotateY(RY); rm->rotateZ(0.*deg);
+      // placement 
+      new G4PVPlacement(rm,                               // rotation relative to mother       
+                        G4ThreeVector(0.*cm,0.*cm,0.*cm), // position relative to mother         
+                        fLogicShield[i],                  // logical volume        
+                        "physShield",                     // physical volume name           
+                        logicMother,                      // logical mother     
+                        isBoolean,                        // is boolean device? (true or false)    
+                        i,                                // copy number    
+                        fCheckOverlaps);                  // check overlaps  
+   }
 
 }
 //______________________________________________________________________________
@@ -927,7 +908,7 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    // - Drawing number: A09016-03-04-0601
    G4double x0 = -0.438*2.54*cm; // beam right from JT model  
    G4double y0 = -5.33*cm;       // low according to JT model
-   G4double z0 = 1.5*2.54*cm;   // downstream according to JT model   
+   G4double z0 = 1.5*2.54*cm;    // downstream according to JT model   
 
    //---- vertical posts along y axis 
    // upstream 
