@@ -44,8 +44,7 @@
 
 #include "Randomize.hh"
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
+//______________________________________________________________________________
 int main(int argc,char** argv)
 {
   // Detect interactive mode (if no arguments) and define UI session
@@ -67,9 +66,8 @@ int main(int argc,char** argv)
 #endif
 
   // Set mandatory initialization classes
-  //
   // Detector construction
-  runManager->SetUserInitialization(new He3TargetDetectorConstruction());
+  runManager->SetUserInitialization( new He3TargetDetectorConstruction(kSBS_GEN_1018) );
 
   // Physics list
   G4VModularPhysicsList* physicsList = new QBBC;
@@ -77,7 +75,7 @@ int main(int argc,char** argv)
   runManager->SetUserInitialization(physicsList);
     
   // User action initialization
-  runManager->SetUserInitialization(new He3TargetActionInitialization());
+  runManager->SetUserInitialization( new He3TargetActionInitialization() );
   
   // Initialize visualization
   //
@@ -90,7 +88,6 @@ int main(int argc,char** argv)
   G4UImanager* UImanager = G4UImanager::GetUIpointer();
 
   // Process macro or start UI session
-  //
   if ( ! ui ) { 
     // batch mode
     G4String command = "/control/execute ";
@@ -112,5 +109,4 @@ int main(int argc,char** argv)
   delete visManager;
   delete runManager;
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo.....
+//______________________________________________________________________________

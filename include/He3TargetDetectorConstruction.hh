@@ -71,7 +71,7 @@ class G4LogicalVolume;
 class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
 {
   public:
-    He3TargetDetectorConstruction();
+    He3TargetDetectorConstruction(int config=kSBS_GEN_146);
     virtual ~He3TargetDetectorConstruction();
 
     virtual G4VPhysicalVolume* Construct();
@@ -84,22 +84,34 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
     G4LogicalVolume*  fScoringVolume;
 
   private:
+   // data members 
    int fEXPConfig;  // switch for helmholz coil angle and possibly shield panels  
    bool fDebug,fCheckOverlaps;
+
+   // logical volumes 
+   G4LogicalVolume **fLogicShield;
+   G4LogicalVolume **fLogicEndWindow;
+   G4LogicalVolume **fLogicPUCoil;  
+   G4LogicalVolume **fLogicPUCoilMount;  
+   G4LogicalVolume *fLogicLadder; 
+   G4LogicalVolume *fLogicGlassCell;
+   G4LogicalVolume *fLogicHe3;  
+
+   // lists
    std::vector<partParameters_t> fPartData;
    std::map<G4String,G4Material *> fMaterialsMap;  
 
+   // methods 
    G4Material *GetMaterial(G4String name);
 
+   void BuildGlassCell();
+   void BuildPolarizedHe3();    
    void BuildBeam(G4LogicalVolume *logicMother); 
    void BuildPickupCoils(G4LogicalVolume *logicMother);    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
    void BuildShield(int config,G4LogicalVolume *logicMother); 
-   void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
    void BuildHelmholtzCoils(int config,const std::string type,G4LogicalVolume *logicMother); 
    void BuildEndWindow(const std::string type,G4LogicalVolume *logicMother);
-
-   G4LogicalVolume *BuildGlassCell();
 
    int ConstructMaterials(); 
    int ReadData(const char *inpath);

@@ -30,15 +30,38 @@
 #include "He3TargetDetectorConstruction.hh"
 
 //______________________________________________________________________________
-He3TargetDetectorConstruction::He3TargetDetectorConstruction()
+He3TargetDetectorConstruction::He3TargetDetectorConstruction(int config)
 : G4VUserDetectorConstruction(),
-  fScoringVolume(0),fEXPConfig(kSBS_GEN_368),fDebug(false),
-  fCheckOverlaps(true)
-{ }
+  fScoringVolume(0),fEXPConfig(kSBS_GEN_146),fDebug(false),fCheckOverlaps(true),
+  fLogicShield(NULL),fLogicEndWindow(NULL),fLogicPUCoil(NULL),fLogicPUCoilMount(NULL),
+  fLogicLadder(NULL),fLogicGlassCell(NULL),fLogicHe3(NULL)
+{ 
+   fEXPConfig = config;
+   // confirm Q2 bin 
+   double Q2=0; 
+   if(fEXPConfig==kSBS_GEN_146)  Q2 = 1.46; 
+   if(fEXPConfig==kSBS_GEN_368)  Q2 = 3.68; 
+   if(fEXPConfig==kSBS_GEN_677)  Q2 = 6.77; 
+   if(fEXPConfig==kSBS_GEN_1018) Q2 = 10.18; 
+   std::cout << "[He3TargetDetectorConstruction]: Setting up for Q2 = " << Q2 << " (GeV/c)^2" << std::endl;
+
+   // 2 layers for shielding, end window 
+   fLogicShield    = new G4LogicalVolume*[2]; 
+   fLogicEndWindow = new G4LogicalVolume*[2];
+
+   // 4 pickup (PU) coils and their mounts 
+   fLogicPUCoil      = new G4LogicalVolume*[4];  
+   fLogicPUCoilMount = new G4LogicalVolume*[4]; 
+ 
+}
 //______________________________________________________________________________
 He3TargetDetectorConstruction::~He3TargetDetectorConstruction()
 { 
-   fPartData.clear(); 
+   fPartData.clear();
+   delete [] fLogicShield;  
+   delete [] fLogicEndWindow; 
+   delete [] fLogicPUCoil; 
+   delete [] fLogicPUCoilMount; 
 }
 //______________________________________________________________________________
 G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
@@ -49,9 +72,6 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
 
   // load all part parameters 
   ReadData("./input/He3-parts.csv");   
-
-  // Option to switch on/off checking of volumes overlaps
-  // G4bool fCheckOverlaps = true;
 
   // World
   G4double world_sizeXY = 5*m;
@@ -166,24 +186,13 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // //
   // fScoringVolume = logicShape2;
 
-  //---- Cu end windows for the target cell 
-  // - main shaft [tube] 
-  // - lip [tube]  
-  // - rounded lip [hemisphere/tube] 
-  // - endcap [hemisphere] 
- 
-  BuildEndWindow("upstream"  ,logicWorld); 
-  BuildEndWindow("downstream",logicWorld); 
-
   //---- glass cell ---- 
-  // we return the logical volume since we want to place the 3He inside of it.  
-  // could consider building the 3He material inside the BuildGlassCell function  
-  G4LogicalVolume *logicGlassCell = BuildGlassCell();
+  BuildGlassCell();
 
   G4VisAttributes *visGC = new G4VisAttributes(); 
   visGC->SetColour( G4Colour::White() );
   visGC->SetForceWireframe(true);  
-  logicGlassCell->SetVisAttributes(visGC); 
+  fLogicGlassCell->SetVisAttributes(visGC); 
 
   // place the volume
   // - note that this is relative to the *target chamber* as that is the first object in the union 
@@ -196,13 +205,16 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   rm_gc->rotateY(180.*deg);  
   rm_gc->rotateZ(180.*deg); 
  
-  new G4PVPlacement(rm_gc,P_tgt_o,logicGlassCell,"physGC",logicWorld,false,0,fCheckOverlaps);       
+  new G4PVPlacement(rm_gc,P_tgt_o,fLogicGlassCell,"physGC",logicWorld,false,0,fCheckOverlaps);       
+
+  //---- Cu end windows for the target cell 
+  BuildEndWindow("upstream"  ,logicWorld); 
+  BuildEndWindow("downstream",logicWorld); 
 
   // cylinder of polarized 3He
-  BuildPolarizedHe3(logicGlassCell);
+  BuildPolarizedHe3();
 
   // helmholtz coils
-  fEXPConfig = kSBS_GEN_368;  
   BuildHelmholtzCoils(fEXPConfig,"maj",logicWorld);  
   BuildHelmholtzCoils(fEXPConfig,"rfy",logicWorld);  
   BuildHelmholtzCoils(fEXPConfig,"min",logicWorld); 
@@ -210,7 +222,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // shield 
   BuildShield(fEXPConfig,logicWorld); 
 
-  // support ladder 
+  // target ladder 
   BuildLadderPlate(logicWorld);
 
   // pickup coils 
@@ -254,7 +266,7 @@ void He3TargetDetectorConstruction::BuildBeam(G4LogicalVolume *logicMother){
 
 }
 //______________________________________________________________________________
-void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMother){
+void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   // build the polarized 3He logical volume and place it in the logicMother 
   // FIXME: - Check volume overlap with glass cell 
   //        - Check volume overlap on endcap; seems like rlip could use a + 0.5*mm offset 
@@ -541,17 +553,20 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   // visHe3->SetForceWireframe(true);  
 
   // logical volume of He3
-  G4LogicalVolume *logicHe3 = new G4LogicalVolume(he3Tube,GetMaterial("He3"),"logicHe3");  
-  logicHe3->SetVisAttributes(visHe3);  
+  fLogicHe3 = new G4LogicalVolume(he3Tube,GetMaterial("He3"),"logicHe3");  
+  fLogicHe3->SetVisAttributes(visHe3);  
  
   // placement of He3 is *inside target chamber*  
-  G4ThreeVector posHe3 = G4ThreeVector(0.*cm,0.*cm,0.*cm); 
+  G4ThreeVector posHe3 = G4ThreeVector(0.*cm,0.*cm,0.*cm);
+
+  bool isBoolean = true;
+ 
   new G4PVPlacement(0,                 // rotation
                     posHe3,            // position 
-                    logicHe3,          // logical volume 
+                    fLogicHe3,          // logical volume 
                     "physHe3",         // name 
-                    logicMother,       // logical mother volume is the target chamber 
-                    false,             // no boolean operations 
+                    fLogicGlassCell,   // logical mother volume is the target chamber 
+                    isBoolean,         // boolean operations 
                     0,                 // copy number 
                     fCheckOverlaps);    // check overlaps
 
@@ -560,11 +575,14 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
 void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4LogicalVolume *logicMother){
    // build the metal end window based on type = upstream or downstream 
 
+   int index=-1;  // index for logic array
    std::string suffix; 
    if( type.compare("upstream")==0 ){
       suffix = "up"; 
+      index = 0; 
    }else if( type.compare("downstream")==0 ){
       suffix = "dn"; 
+      index = 1; 
    }else{
       std::cout << "[He3TargetDetectorConstruction::BuildEndWindow]: ERROR! Invalid type = " << type << std::endl;
       exit(1);
@@ -648,15 +666,15 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    endWindow = new G4UnionSolid(label3,endWindow,endcap  ,rm_ec  ,P_ec); 
 
    // create the logical volume
-   G4String logicLabel = "logicEndWindow_" + suffix;  
-   G4LogicalVolume *logicEndWindow = new G4LogicalVolume(endWindow,GetMaterial("Copper"),logicLabel);
+   fLogicEndWindow[index] = new G4LogicalVolume(endWindow,GetMaterial("Copper"),"logicEndWindow"); 
+   // G4LogicalVolume *logicEndWindow = new G4LogicalVolume(endWindow,GetMaterial("Copper"),logicLabel);
 
    // visualization
    G4VisAttributes *vis = new G4VisAttributes();
    vis->SetColour( G4Colour::Red() ); 
    vis->SetForceWireframe(true);
 
-   logicEndWindow->SetVisAttributes(vis); 
+   fLogicEndWindow[index]->SetVisAttributes(vis); 
 
    // place it at the end of the target chamber 
    partParameters_t tc; 
@@ -677,17 +695,17 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    rm_ew->rotateX(ra[0]); 
    rm_ew->rotateY(ra[1]); 
    rm_ew->rotateZ(ra[2]);
-   
-   G4String physLabel = "physCuEndWindow_" + suffix;  
+
+   bool isBoolean = true;
 
    new G4PVPlacement(rm_ew,
 	             P_ew, 
-	             logicEndWindow,      // logical volume 
-	             physLabel,           // name 
-	             logicMother,         // logical mother volume is the target chamber 
-	             false,               // no boolean operations 
-	             0,                   // copy number 
-	             fCheckOverlaps);     // check overlaps
+	             fLogicEndWindow[index],  // logical volume 
+	             "physEndWindow",         // name 
+	             logicMother,             // logical mother volume is the target chamber 
+	             isBoolean,               // no boolean operations 
+	             index,                   // copy number 
+	             fCheckOverlaps);         // check overlaps
  
 }
 //______________________________________________________________________________
@@ -761,42 +779,43 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
    G4double p3 = 5.12*2.54*cm; 
    G4double dh = 16.70*2.54*cm; 
 
-   G4double dx=0,xw_br=0,yw_br=0;
+   G4double dx=0,dx0=5.*cm;
+   G4double xw_br=0,yw_br=0;
    G4double zw_br=10.*cm; // arbitrary cut depth in z; just need enough to break through 
    if(config==kSBS_GEN_146){
-      dx    = 2.*cm + p1 + p2 + p3; 
+      dx    = dx0 + p1 + p2 + p3; 
       xw_br = dh; 
       yw_br = 21.41*2.54*cm; 
       // coordinates 
       ys    = 0.*cm; 
    }else if(config==kSBS_GEN_368){
-      dx    = 2.*cm + p2 + p3; 
+      dx    = dx0 + p2 + p3; 
       xw_br = dh; 
       yw_br = 21.41*2.54*cm; 
       // coordinates 
       ys    = 0.*cm; 
    }else if(config==kSBS_GEN_677){
-      dx    = 2.*cm + p3; 
+      dx    = dx0 + p3; 
       xw_br = dh; 
       yw_br = 21.41*2.54*cm; 
       // coordinates 
       ys    = 0.*cm; 
    }else if(config==kSBS_GEN_1018){
-      dx    = 2.*cm; 
+      dx    = dx0; 
       xw_br = dh; 
       yw_br = 21.41*2.54*cm; 
       // coordinates 
       ys    = 0.*cm; 
    }else if(config==kSBS_GEN_full){
       // full window cut 
-      dx    = 2.*cm; 
+      dx    = dx0; 
       xw_br = p1 + p2 + p3 + dh; 
       yw_br = 21.41*2.54*cm;
       // coordinates 
       ys    = 0.*cm;  
    }else if(config==kSBS_GEN_new){
       // 6/27/20: new design from Bert 
-      dx    = 2.*cm; 
+      dx    = dx0; 
       xw_br = door; 
       yw_br = 0.8*sh.y_len; 
       // coordinates
@@ -858,13 +877,17 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
    innerShield = new G4SubtractionSolid("innerShield_4",innerShield,windowCut_beamRight_dn,0,Pw_br_dn); 
    innerShield = new G4SubtractionSolid("innerShield",innerShield,windowCut_up,0,Pw_up); 
 
-   // logical volume
-   G4VisAttributes *visIn = new G4VisAttributes();
-   // visIn->SetForceWireframe(true); 
-   visIn->SetColour( G4Colour::Magenta() ); 
+   // accumulate into a single logical volume object 
+   fLogicShield[0] = new G4LogicalVolume(innerShield,GetMaterial("Carbon_Steel_1008"),"logicShield");  
+   fLogicShield[1] = new G4LogicalVolume(outerShield,GetMaterial("Carbon_Steel_1008"),"logicShield");  
 
-   G4LogicalVolume *logicInner = new G4LogicalVolume(innerShield,GetMaterial("Carbon_Steel_1008"),"logicInner");
-   logicInner->SetVisAttributes(visIn);  
+   // logical volume
+   G4VisAttributes *vis = new G4VisAttributes();
+   // vis->SetForceWireframe(true); 
+   vis->SetColour( G4Colour::Magenta() ); 
+
+   // G4LogicalVolume *logicInner = new G4LogicalVolume(innerShield,GetMaterial("Carbon_Steel_1008"),"logicInner");
+   for(int i=0;i<2;i++) fLogicShield[i]->SetVisAttributes(vis);  
 
    // place the parts 
    G4double RY = 55.0*deg;  // FIXME: This angle is still an estimate!  
@@ -876,25 +899,25 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
 
    bool isBoolean = true; 
 
-   // outer
+   // inner 
    new G4PVPlacement(rm,                // rotation relative to mother       
                      P,                 // position relative to mother         
-                     logicOuter,        // logical volume        
-                     "physShieldOuter", // physical volume name           
+                     fLogicShield[0],   // logical volume        
+                     "physShield",      // physical volume name           
                      logicMother,       // logical mother     
                      isBoolean,         // is boolean device? (true or false)    
                      0,                 // copy number    
                      fCheckOverlaps);   // check overlaps  
 
-   // inner
+   // outer
    new G4PVPlacement(rm,                // rotation relative to mother       
                      P,                 // position relative to mother         
-                     logicInner,        // logical volume        
-                     "physShieldInner", // physical volume name           
+                     fLogicShield[1],   // logical volume        
+                     "physShield",      // physical volume name           
                      logicMother,       // logical mother     
                      isBoolean,         // is boolean device? (true or false)    
-                     0,                 // copy number    
-                     fCheckOverlaps);   // check overlaps
+                     1,                 // copy number    
+                     fCheckOverlaps);   // check overlaps  
 
 }
 //______________________________________________________________________________
@@ -1004,8 +1027,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    vis->SetColour( G4Colour::Red() ); 
    // vis->SetForceWireframe(true);
 
-   G4LogicalVolume *logicLadder = new G4LogicalVolume(ladder,GetMaterial("Aluminum"),"logicLadder"); 
-   logicLadder->SetVisAttributes(vis); 
+   fLogicLadder = new G4LogicalVolume(ladder,GetMaterial("Aluminum"),"logicLadder"); 
+   fLogicLadder->SetVisAttributes(vis); 
 
    G4double lx = x0; 
    G4double ly = y0;  
@@ -1014,13 +1037,15 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    G4ThreeVector P_l      = G4ThreeVector(lx,ly,lz);   
    G4RotationMatrix *rm_l = new G4RotationMatrix();
    rm_l->rotateX(0.*deg); rm_l->rotateY(0.*deg); rm_l->rotateZ(0.*deg); 
+
+   bool isBoolean = true;
  
    new G4PVPlacement(rm_l,                // rotation [relative to mother]    
                      P_l,                 // position [relative to mother] 
-                     logicLadder,         // logical volume    
+                     fLogicLadder,         // logical volume    
                      "physLadder",        // name                          
                      logicMother,         // logical mother volume            
-                     false,               // no boolean operations          
+                     isBoolean,           // boolean operations          
                      0,                   // copy number                   
                      fCheckOverlaps);     // check overlaps               
    
@@ -1039,7 +1064,6 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
 
    G4Box *coilB = new G4Box("coilB",cbul.x_len/2.,cbul.y_len/2.,cbul.z_len/2.); 
 
-
    // U-cut: create a *subtraction* with a component for a U shape  
    G4double xlen = 2.*cbul.x_len;  // far exceed the thickness to make sure it's a cutaway 
    G4double ylen = 2.*1.3*cm; // cmul.y_len/2.;
@@ -1056,8 +1080,6 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
    GetPart("pu_coil",pu); 
 
    G4Box *coilOuter = new G4Box("coilOuter",pu.x_len/2.,pu.y_len/2.,pu.z_len/2.);
-
-   std::cout << "PU COIL THICKNESS = " << pu.x_len/cm << " cm" << std::endl;
 
    // create a cutaway that actually defines the coil since the initial dimensions are the OUTER values 
    G4double xc = 2.*pu.x_len; // cut straight through in this dimension  
@@ -1092,129 +1114,95 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
    G4VisAttributes *vis = new G4VisAttributes();
    vis->SetColour( G4Colour::Magenta() );  
    // vis->SetForceWireframe(true);  
-
-   G4LogicalVolume *logicCoilBMNT = new G4LogicalVolume(coilBMNT,GetMaterial("Aluminum"),"logicCoilBMNT");
-   logicCoilBMNT->SetVisAttributes(vis); 
-
-   bool isBoolean = true;  // not sure what this really does...  
-
+   
+   bool isBoolean = true;  // not sure what this really does... 
+ 
    // FIXME: constraints come from JT file; is the 2.5 cm correct?
    G4double xbm = (2.5*cm)/2. + cbul.x_len/2. +  cmul.x_len + pu.x_len; 
    G4double ybm = -0.9*cm + y0; // placement relative to BEAM 
    G4double zbm = 7.2*cm; 
-   
-   G4ThreeVector P_ul = G4ThreeVector(xbm,ybm,zbm);
-   G4RotationMatrix *rm = new G4RotationMatrix(); 
-   rm->rotateX(0); rm->rotateY(0); rm->rotateZ(0);   
 
-   G4RotationMatrix *rm180 = new G4RotationMatrix(); 
-   rm180->rotateX(0); rm180->rotateY(180*deg); rm180->rotateZ(0);   
+   G4double X=0,Y=0,Z=0;
+   G4double RX=0,RY=0,RZ=0;
 
-   // beam left
-   new G4PVPlacement(rm180,               // rotation [relative to mother]             
-                     P_ul,                // position [relative to mother]          
-                     logicCoilBMNT,       // logical volume                            
-                     "physPUCoilMNT_ubl", // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations (true, false) 
-                     0,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
+   // place the mounts 
+   for(int i=0;i<4;i++){
+      fLogicPUCoilMount[i] = new G4LogicalVolume(coilBMNT,GetMaterial("Aluminum"),"logicCoilBMNT"); 
+      fLogicPUCoilMount[i]->SetVisAttributes(vis);
+      if(i==0){
+	 // upstream, beam left
+         X = xbm; Y = ybm; Z = zbm;
+         RY = 180.*deg; 
+      }else if(i==1){
+	 // upstream, beam right
+         X = -xbm; Y = ybm; Z = zbm;
+         RY = 0.*deg; 
+      }else if(i==2){
+	 // downstream, beam left
+         X = xbm; Y = ybm; Z = -zbm;
+         RY = 180.*deg; 
+      }else if(i==3){
+	 // downstream, beam right 
+         X = -xbm; Y = ybm; Z = -zbm;
+         RY = 0.*deg; 
+      }
+      G4RotationMatrix *rm = new G4RotationMatrix(); 
+      rm->rotateX(RX); rm->rotateY(RY); rm->rotateZ(RZ); 
 
-   // beam right 
-   G4ThreeVector P_ur = G4ThreeVector(-xbm,ybm,zbm);
-
-   new G4PVPlacement(rm,                  // rotation [relative to mother]             
-                     P_ur,                // position [relative to mother]          
-                     logicCoilBMNT,       // logical volume                            
-                     "physPUCoilMNT_ubr", // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations                   
-                     1,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
-
-   //---- downstream 
-   G4ThreeVector P_dl = G4ThreeVector(xbm,ybm,-zbm);
-
-   // beam left
-   new G4PVPlacement(rm180,               // rotation [relative to mother]             
-                     P_dl,                // position [relative to mother]          
-                     logicCoilBMNT,       // logical volume                            
-                     "physPUCoilMNT_dbl", // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations (true, false)
-                     2,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
-
-   // beam right 
-   G4ThreeVector P_dr = G4ThreeVector(-xbm,ybm,-zbm);
-
-   new G4PVPlacement(rm,                  // rotation [relative to mother]             
-                     P_dr,                // position [relative to mother]          
-                     logicCoilBMNT,       // logical volume                            
-                     "physPUCoilMNT_dbr", // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations (true, false)
-                     3,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
+      new G4PVPlacement(rm,                   // rotation [relative to mother]             
+                        G4ThreeVector(X,Y,Z), // position [relative to mother]          
+                        fLogicPUCoilMount[i], // logical volume                            
+                        "physPUCoilMNT",      // name                                       
+                        logicMother,          // logical mother volume                   
+                        isBoolean,            // boolean operations (true, false) 
+                        i,                    // copy number                          
+                        fCheckOverlaps);      // check overlaps                         
+ 
+   } 
 
    //---- pickup coil
    G4VisAttributes *visCoil = new G4VisAttributes(); 
    visCoil->SetColour( G4Colour(255,140,0) );  // dark orange
- 
-   G4LogicalVolume *logicCoil = new G4LogicalVolume(coil,GetMaterial("Copper"),"logicCoil");
-   logicCoil->SetVisAttributes(visCoil);
 
    // place it to be flush against the mount assembly 
    G4double xbm_c = xbm - pu.x_len/2. - cmul.x_len; 
    G4double ybm_c = y0;   
-   G4ThreeVector P_pul = G4ThreeVector(xbm_c,ybm_c,zbm); 
+   G4double zbm_c = zbm;   
 
-   // beam left
-   new G4PVPlacement(rm180,               // rotation [relative to mother]             
-                     P_pul,               // position [relative to mother]          
-                     logicCoil,           // logical volume                            
-                     "physPUCoil_ubl",    // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations (true, false) 
-                     0,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
+   // place the coils 
+   for(int i=0;i<4;i++){
+      fLogicPUCoil[i] = new G4LogicalVolume(coil,GetMaterial("Copper"),"logicCoil"); 
+      fLogicPUCoil[i]->SetVisAttributes(visCoil);
+      if(i==0){
+	 // upstream, beam left
+         X = xbm_c; Y = ybm_c; Z = zbm_c;
+         RY = 180.*deg; 
+      }else if(i==1){
+	 // upstream, beam right
+         X = -xbm_c; Y = ybm_c; Z = zbm_c;
+         RY = 0.*deg; 
+      }else if(i==2){
+	 // downstream, beam left
+         X = xbm_c; Y = ybm_c; Z = -zbm_c;
+         RY = 180.*deg; 
+      }else if(i==3){
+	 // downstream, beam right 
+         X = -xbm_c; Y = ybm_c; Z = -zbm_c;
+         RY = 0.*deg; 
+      }
+      G4RotationMatrix *rm = new G4RotationMatrix(); 
+      rm->rotateX(RX); rm->rotateY(RY); rm->rotateZ(RZ); 
 
-   // beam right 
-   G4ThreeVector P_pur = G4ThreeVector(-xbm_c,ybm_c,zbm);
-
-   new G4PVPlacement(rm,                  // rotation [relative to mother]             
-                     P_pur,               // position [relative to mother]          
-                     logicCoil,           // logical volume                            
-                     "physPUCoil_ubr",    // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations                   
-                     1,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
-
-   //---- downstream 
-   G4ThreeVector P_pdl = G4ThreeVector(xbm_c,ybm_c,-zbm);
-
-   // beam left
-   new G4PVPlacement(rm180,               // rotation [relative to mother]             
-                     P_pdl,               // position [relative to mother]          
-                     logicCoil,           // logical volume                            
-                     "physPUCoil_dbl",    // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations (true, false)
-                     2,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
-
-   // beam right 
-   G4ThreeVector P_pdr = G4ThreeVector(-xbm_c,ybm_c,-zbm);
-
-   new G4PVPlacement(rm,                  // rotation [relative to mother]             
-                     P_pdr,               // position [relative to mother]          
-                     logicCoil,           // logical volume                            
-                     "physPUCoil_dbr",    // name                                       
-                     logicMother,         // logical mother volume                   
-                     isBoolean,           // boolean operations (true, false)
-                     3,                   // copy number                          
-                     fCheckOverlaps);     // check overlaps                         
+      new G4PVPlacement(rm,                   // rotation [relative to mother]             
+                        G4ThreeVector(X,Y,Z), // position [relative to mother]          
+                        fLogicPUCoil[i],      // logical volume                            
+                        "physPUCoil",         // name                                       
+                        logicMother,          // logical mother volume                   
+                        isBoolean,            // boolean operations (true, false) 
+                        i,                    // copy number                          
+                        fCheckOverlaps);      // check overlaps                         
+ 
+   } 
  
 }
 //______________________________________________________________________________
@@ -1478,11 +1466,9 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 
 }
 //______________________________________________________________________________
-G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
+void He3TargetDetectorConstruction::BuildGlassCell(){
    // construct the glass cell of the target
-   // FIXME: Check transfer tube coordinates and dimensions (see JT file) 
-   //        - Vertical tubes may be separated by 1.8 in = 2.286 cm  
-   //        - Horizontal tubes may be higher in y than originally determined.  Posts will need to be taller  
+   // - transfer tube dimensions based on JT file 
 
    //---- pumping chamber ----
    partParameters_t pumpCh;
@@ -1776,9 +1762,8 @@ G4LogicalVolume *He3TargetDetectorConstruction::BuildGlassCell(){
    // pumping chamber.  also change the name since everything is connected now 
    glassCell = new G4UnionSolid("glassCell",glassCell,pumpChamberShape,rm_pc,P_pc);
 
-   G4LogicalVolume *logicGlassCell = new G4LogicalVolume(glassCell,GetMaterial("GE180"),"logicGlassCell");
+   fLogicGlassCell = new G4LogicalVolume(glassCell,GetMaterial("GE180"),"logicGlassCell");
 
-   return logicGlassCell; 
 }
 //______________________________________________________________________________
 G4Material *He3TargetDetectorConstruction::GetMaterial(G4String name){
@@ -1897,9 +1882,10 @@ int He3TargetDetectorConstruction::ConstructMaterials(){
 
    // AISI 1008 carbon steel
    // details from https://www.azom.com/article.aspx?ArticleID=6538
-   // assuming the composition with 0.06% C, 0.38% Mn, 0.01% Si for a density of 7.782*g/cm3   
+   // assuming the composition with 0.06% C, 0.38% Mn, 0.01% Si for a density of 7.782*g/cm3    
+   // NOTE: will throw a warning because this doesn't add to 100%
    G4Material *Carbon_Steel_1008 = new G4Material("Carbon_Steel_1008",7.872*g/cm3,6); 
-   Carbon_Steel_1008->AddElement(elFe,0.9905); // avg of 0.9931 and 0.9970  
+   Carbon_Steel_1008->AddElement(elFe,0.9905);   
    Carbon_Steel_1008->AddElement(elMn,0.0038);  
    Carbon_Steel_1008->AddElement(elC ,0.0006); 
    Carbon_Steel_1008->AddElement(elS ,0.0005); 
