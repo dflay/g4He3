@@ -6,8 +6,8 @@
 // - 368  => Q2 = 3.68  (GeV/c)^2  
 // - 677  => Q2 = 6.77  (GeV/c)^2  
 // - 1018 => Q2 = 10.18 (GeV/c)^2
-// mainly for shielding:  
-// - full => full window cut (no panel 1, 2, 3, and door) 
+// for shielding:  
+// - full => full window cut (remove panel 1, 2, 3, and door) 
 // - new  => new design from Bert Metzger (6/2020)  
 
 enum expConf { 

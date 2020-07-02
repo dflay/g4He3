@@ -49,6 +49,16 @@ He3TargetDetectorConstruction::He3TargetDetectorConstruction(int config)
    fLogicShield    = new G4LogicalVolume*[2]; 
    fLogicEndWindow = new G4LogicalVolume*[2];
 
+   // 2 Helmholtz coils for Maj, Min, RFY
+   // aluminum core
+   fLogicHelmholtzMaj = new G4LogicalVolume*[2];  
+   fLogicHelmholtzMin = new G4LogicalVolume*[2];  
+   fLogicHelmholtzRFY = new G4LogicalVolume*[2];  
+   // G10 shells
+   fLogicHelmholtzSMaj = new G4LogicalVolume*[2];  
+   fLogicHelmholtzSMin = new G4LogicalVolume*[2];  
+   fLogicHelmholtzSRFY = new G4LogicalVolume*[2];  
+
    // 4 pickup (PU) coils and their mounts 
    fLogicPUCoil      = new G4LogicalVolume*[4];  
    fLogicPUCoilMount = new G4LogicalVolume*[4]; 
@@ -61,7 +71,10 @@ He3TargetDetectorConstruction::~He3TargetDetectorConstruction()
    delete [] fLogicShield;  
    delete [] fLogicEndWindow; 
    delete [] fLogicPUCoil; 
-   delete [] fLogicPUCoilMount; 
+   delete [] fLogicPUCoilMount;
+   delete [] fLogicHelmholtzMaj; 
+   delete [] fLogicHelmholtzMin; 
+   delete [] fLogicHelmholtzRFY; 
 }
 //______________________________________________________________________________
 G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
@@ -1234,7 +1247,6 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 
    // coil parameters   
    G4double D      = 0.5*(cn.r_min + cn.r_max);          // helmholtz separation D = R = 0.5(rmin + rmax) 
-   // G4double D      = cn.r_tor;          // helmholtz separation D = R = 0.5(rmin + rmax) 
    G4double shWall = 0;  
 
    if( type.compare("maj")==0 ) shWall = 5.0*mm;         // FIXME: Estimates for now! 
@@ -1289,118 +1301,112 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
     G4SubtractionSolid *coilShell_n = new G4SubtractionSolid("cns_sub",cnsTube,cnsTube_core,0,G4ThreeVector(0,0,0));
     G4SubtractionSolid *coilShell_p = new G4SubtractionSolid("cps_sub",cpsTube,cpsTube_core,0,G4ThreeVector(0,0,0));
 
-//    // torus geometry
-//    // - some adjustments here: we should make the *thickness* of the core 
-//    //   equal to the thickness specified in the drawings. 
-//    //   this is better than the estimate of the derived r_max of the torus centered on 
-//    //   the radius of curvature  
-//    cn.r_max = cn.length/2.;    
-//    cp.r_max = cp.length/2.;    
-// 
-//    // create the shell first 
-//    partParameters_t cns;
-//    cns.name     = shellName_n; 
-//    cns.r_min    = cn.r_max;  
-//    cns.r_max    = cn.r_max + shWall;
-//    cns.r_tor    = cn.r_tor;  
-//    cns.length   = cn.length;
-//    cns.startPhi = 0.*deg;
-//    cns.dPhi     = 360.*deg;   
-//  
-//    G4Torus *cnsTube = new G4Torus(cns.name,
-//                                   cns.r_min   ,cns.r_max,cns.r_tor,
-//                                   cns.startPhi,cns.dPhi);
-// 
-//    partParameters_t cps;
-//    cps.name     = shellName_p; 
-//    cps.r_min    = cp.r_max;  
-//    cps.r_max    = cp.r_max + shWall;
-//    cps.r_tor    = cp.r_tor;  
-//    cps.length   = cp.length;
-//    cps.startPhi = 0.*deg;
-//    cps.dPhi     = 360.*deg;   
-// 
-//    G4Torus *cpsTube = new G4Torus(cps.name,
-// 	                          cps.r_min   ,cps.r_max,cps.r_tor,
-// 	                          cps.startPhi,cps.dPhi);
+    // now for the logical volume 
+    G4VisAttributes *visCoilShell = new G4VisAttributes();
+    visCoilShell->SetForceWireframe(); 
+    if(type.compare("maj")==0) visCoilShell->SetColour( G4Colour::Red()   ); 
+    if(type.compare("rfy")==0) visCoilShell->SetColour( G4Colour::Green() ); 
+    if(type.compare("min")==0) visCoilShell->SetColour( G4Colour::Blue()  ); 
 
-   // create a union of the coils
-   G4ThreeVector Ps = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
-   G4UnionSolid *coilShells; 
-   // coilShells = new G4UnionSolid("coilShells",cnsTube,cpsTube,0,Ps); // no rotation
-   coilShells = new G4UnionSolid("coilShells",coilShell_n,coilShell_p,0,Ps); // no rotation
+    if(type.compare("maj")==0){
+       fLogicHelmholtzSMaj[0] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell"); 
+       fLogicHelmholtzSMaj[1] = new G4LogicalVolume(coilShell_p,GetMaterial("NEMAG10"),"logicCoilShell");
+       for(int i=0;i<2;i++) fLogicHelmholtzSMaj[i]->SetVisAttributes(visCoilShell); 
+    }else if(type.compare("rfy")==0){
+       fLogicHelmholtzSRFY[0] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");  
+       fLogicHelmholtzSRFY[1] = new G4LogicalVolume(coilShell_p,GetMaterial("NEMAG10"),"logicCoilShell");
+       for(int i=0;i<2;i++) fLogicHelmholtzSRFY[i]->SetVisAttributes(visCoilShell); 
+    }else if(type.compare("min")==0){
+       fLogicHelmholtzSMin[0] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");   
+       fLogicHelmholtzSMin[1] = new G4LogicalVolume(coilShell_p,GetMaterial("NEMAG10"),"logicCoilShell");
+       for(int i=0;i<2;i++) fLogicHelmholtzSMin[i]->SetVisAttributes(visCoilShell); 
+    } 
 
-   // now for the logical volume 
-   G4VisAttributes *visCoilShell = new G4VisAttributes();
-   visCoilShell->SetForceWireframe(); 
-   if(type.compare("maj")==0) visCoilShell->SetColour( G4Colour::Red()   ); 
-   if(type.compare("rfy")==0) visCoilShell->SetColour( G4Colour::Green() ); 
-   if(type.compare("min")==0) visCoilShell->SetColour( G4Colour::Blue()  ); 
+    // place the volume according to the input parameters  
+    G4double x0 = cn.x;  
+    G4double y0 = cn.y;  
+    G4double z0 = cn.z; 
 
-   G4LogicalVolume *logicCoilShell = new G4LogicalVolume(coilShells,GetMaterial("NEMAG10"),"logicCoilShell");
-   logicCoilShell->SetVisAttributes(visCoilShell);  
+    G4double RX0 = cn.rx;    
+    G4double RY0 = cn.ry;    
+    G4double RZ0 = cn.rz;    
 
-   // place the volume according to the input parameters  
-   G4double x = cn.x;  
-   G4double y = cn.y;  
-   G4double z = cn.z;  
-
-   // additional rotation to match engineering drawings (number A09016-03-08-0000) 
-   G4double drx=0,dry=0,drz=0;
-   if( type.compare("maj")==0 || type.compare("min")==0 ){
-      if(config==kSBS_GEN_146)  dry = 43.5*deg; 
-      if(config==kSBS_GEN_368)  dry = 43.5*deg; 
-      if(config==kSBS_GEN_677)  dry = 10.0*deg; 
-      if(config==kSBS_GEN_1018) dry = 10.0*deg; 
-   } 
-
-   G4double ph_x = cn.rx + drx; 
-   G4double ph_y = cn.ry + dry; 
-   G4double ph_z = cn.rz + drz; 
- 
-   // total rotation
-   G4double COS_TOT = cos(ph_y); 
-   G4double SIN_TOT = sin(ph_y);
+    // additional rotation to match engineering drawings (number A09016-03-08-0000) 
+    G4double dry=0;
+    if( type.compare("maj")==0 || type.compare("min")==0 ){
+       if(config==kSBS_GEN_146)  dry = 43.5*deg; 
+       if(config==kSBS_GEN_368)  dry = 43.5*deg; 
+       if(config==kSBS_GEN_677)  dry = 10.0*deg; 
+       if(config==kSBS_GEN_1018) dry = 10.0*deg; 
+    } 
 
    // adjust for y rotation.  
    // FIXME: does this exactly follow rotated coordinates?
    // rotation about y 
    // x' =  xcos + zsin 
    // z' = -xsin + zcos
- 
-   if(type.compare("maj")==0){ 
-      x += (D/2)*fabs(SIN_TOT); 
-      z += (D/2)*fabs(COS_TOT);
-   }else if(type.compare("rfy")==0){
-      y -= D/2.;
-   }else if(type.compare("min")==0){
-      x += (D/2)*fabs(SIN_TOT); 
-      z -= (D/2)*fabs(COS_TOT);
-   } 
- 
-   G4ThreeVector P_c    = G4ThreeVector(x,y,z);   
-   G4RotationMatrix *rm = new G4RotationMatrix();
-   rm->rotateX(ph_x); 
-   rm->rotateY(ph_y); 
-   rm->rotateZ(ph_z);
 
    char coilShellName[200];
    sprintf(coilShellName,"%s_shell",partName);  
 
-   bool isBoolean = true; 
+   bool isBoolean = true;
 
-   new G4PVPlacement(rm,               // rotation                                        
-                     P_c,              // position                                             
-                     logicCoilShell,   // logical volume                                      
-                     coilShellName,    // name                                                  
-                     logicMother,      // logical mother volume is the target chamber          
-                     isBoolean,        // boolean operations                        
-                     0,                // copy number                                   
-                     fCheckOverlaps);  // check overlaps                              
+   // rotation 
+   G4double RX = RX0;  
+   G4double RY = RY0 + dry;  
+   G4double RZ = RZ0;
+
+   G4RotationMatrix *rms = new G4RotationMatrix(); 
+   rms->rotateX(RX); rms->rotateY(RY); rms->rotateZ(RZ);   
+
+   // total rotation
+   G4double COS_TOT = cos(RY); 
+   G4double SIN_TOT = sin(RY);
+   
+   G4double x=0,y=0,z=0;
+
+   if(type.compare("maj")==0){
+      y = y0; 
+      for(int i=0;i<2;i++){
+	 // position 
+	 if(i==0){
+	    x = x0 - (D/2.)*fabs(SIN_TOT);
+            z = z0 - (D/2.)*fabs(COS_TOT);
+         }else if(i==1){
+	    x = x0 + (D/2.)*fabs(SIN_TOT); 
+            z = z0 + (D/2.)*fabs(COS_TOT);
+         } 
+	 G4ThreeVector P_cs = G4ThreeVector(x,y,z);
+	 new G4PVPlacement(rms,P_cs,fLogicHelmholtzSMaj[i],"physHelmholtzShellMaj",logicMother,isBoolean,i,fCheckOverlaps);
+      }
+   }else if(type.compare("rfy")==0){
+      x = x0; 
+      z = z0; 
+      for(int i=0;i<2;i++){
+	 // position
+       	 if(i==0) y = y0 - D/2.;  // below 
+	 if(i==1) y = y0 + D/2.;  // above
+	 G4ThreeVector P_cs = G4ThreeVector(x,y,z);
+	 new G4PVPlacement(rms,P_cs,fLogicHelmholtzSRFY[i],"physHelmholtzShellRFY",logicMother,isBoolean,i,fCheckOverlaps);
+      }
+   }else if(type.compare("min")==0){
+      y = y0; 
+      for(int i=0;i<2;i++){
+	 // position -- note sign change compared to maj!  
+	 if(i==0){
+            x = x0 + (D/2.)*fabs(SIN_TOT);
+	    z = z0 - (D/2.)*fabs(COS_TOT);
+	 }else if(i==1){
+            x = x0 - (D/2.)*fabs(SIN_TOT);
+	    z = z0 + (D/2.)*fabs(COS_TOT);
+         } 
+	 G4ThreeVector P_cs = G4ThreeVector(x,y,z);
+	 new G4PVPlacement(rms,P_cs,fLogicHelmholtzSMin[i],"physHelmholtzShellMin",logicMother,isBoolean,i,fCheckOverlaps);
+      }
+   }
 
    // aluminum core -- goes *inside* the shell  
    G4VisAttributes *visCoil = new G4VisAttributes();
-   // visCoil->SetColour( G4Colour(255,140,0) );  // dark orange 
    visCoil->SetColour( G4Colour::Grey() );  
 
    // cylindrical geometry 
@@ -1414,36 +1420,37 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 	                       cp.length/2.,
 	                       cp.startPhi,cp.dPhi);
 
-   // torus geometry  
-//    G4Torus *cnTube = new G4Torus(cn.name,
-//                                  cn.r_min   ,cn.r_max,cn.r_tor,
-//                                  cn.startPhi,cn.dPhi);
-// 
-//    G4Torus *cpTube = new G4Torus(cp.name,
-// 	                         cp.r_min   ,cp.r_max,cp.r_tor,
-// 	                         cp.startPhi,cp.dPhi);
+   if(type.compare("maj")==0){
+      fLogicHelmholtzMaj[0] = new G4LogicalVolume(cnTube,GetMaterial("Aluminum"),"logicCoilMaj"); 
+      fLogicHelmholtzMaj[1] = new G4LogicalVolume(cpTube,GetMaterial("Aluminum"),"logicCoilMaj");
+      for(int i=0;i<2;i++) fLogicHelmholtzMaj[i]->SetVisAttributes(visCoil); 
+   }else if(type.compare("rfy")==0){
+      fLogicHelmholtzRFY[0] = new G4LogicalVolume(cnTube,GetMaterial("Aluminum"),"logicCoilRFY"); 
+      fLogicHelmholtzRFY[1] = new G4LogicalVolume(cpTube,GetMaterial("Aluminum"),"logicCoilRFY");
+      for(int i=0;i<2;i++) fLogicHelmholtzRFY[i]->SetVisAttributes(visCoil); 
+   }else if(type.compare("min")==0){
+      fLogicHelmholtzMin[0] = new G4LogicalVolume(cnTube,GetMaterial("Aluminum"),"logicCoilMin"); 
+      fLogicHelmholtzMin[1] = new G4LogicalVolume(cpTube,GetMaterial("Aluminum"),"logicCoilMin");
+      for(int i=0;i<2;i++) fLogicHelmholtzMin[i]->SetVisAttributes(visCoil); 
+   }
 
-   // create a union of the coils
-   G4ThreeVector P      = G4ThreeVector(0.*cm,0.*cm,D);  // separated by z = D  
- 
-   G4UnionSolid *coils; 
-   coils = new G4UnionSolid("coils",cnTube,cpTube,0,P); // no rotation
-
-   // now for the logical volume 
-   G4LogicalVolume *logicCoils = new G4LogicalVolume(coils,GetMaterial("Aluminum"),"logicCoils");
-   logicCoils->SetVisAttributes(visCoil);  
-
-   // NOTE: the position is the "origin" because we already rotated 
-   //       the shell relative to the mother logical volume which is the physical world 
-   G4ThreeVector Pcc = G4ThreeVector(0,0,0); 
-   new G4PVPlacement(0,                // rotation [relative to mother]                                       
-                     Pcc,              // position [relative to mother]                                            
-                     logicCoils,       // logical volume                                      
-                     coilName_pp,      // name                                                  
-                     logicCoilShell,   // logical mother volume          
-                     isBoolean,        // no boolean operations                        
-                     0,                // copy number                                   
-                     fCheckOverlaps);  // check overlaps                              
+   // placement.  note logic mother is the shell!  no rotation or position offsets needed  
+   if(type.compare("maj")==0){
+      for(int i=0;i<2;i++){
+	 new G4PVPlacement(0,G4ThreeVector(0,0,0),
+                           fLogicHelmholtzMaj[i],"physHelmholtzMaj",fLogicHelmholtzSMaj[i],isBoolean,i,fCheckOverlaps);
+      }
+   }else if(type.compare("rfy")==0){
+      for(int i=0;i<2;i++){
+	 new G4PVPlacement(0,G4ThreeVector(0,0,0),
+                           fLogicHelmholtzRFY[i],"physHelmholtzRFY",fLogicHelmholtzSRFY[i],isBoolean,i,fCheckOverlaps);
+      }
+   }else if(type.compare("min")==0){
+      for(int i=0;i<2;i++){
+	 new G4PVPlacement(0,G4ThreeVector(0,0,0),
+                           fLogicHelmholtzMin[i],"physHelmholtzMin",fLogicHelmholtzSMin[i],isBoolean,i,fCheckOverlaps);
+      }
+   } 
 
 }
 //______________________________________________________________________________

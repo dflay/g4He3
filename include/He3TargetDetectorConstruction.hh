@@ -92,7 +92,13 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
    G4LogicalVolume **fLogicShield;
    G4LogicalVolume **fLogicEndWindow;
    G4LogicalVolume **fLogicPUCoil;  
-   G4LogicalVolume **fLogicPUCoilMount;  
+   G4LogicalVolume **fLogicPUCoilMount; 
+   G4LogicalVolume **fLogicHelmholtzSMaj;    
+   G4LogicalVolume **fLogicHelmholtzSMin;    
+   G4LogicalVolume **fLogicHelmholtzSRFY;    
+   G4LogicalVolume **fLogicHelmholtzMaj;    
+   G4LogicalVolume **fLogicHelmholtzMin;    
+   G4LogicalVolume **fLogicHelmholtzRFY;  
    G4LogicalVolume *fLogicLadder; 
    G4LogicalVolume *fLogicGlassCell;
    G4LogicalVolume *fLogicHe3;  
