@@ -543,7 +543,9 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   G4String sdName = "He3Target/He3"; 
   G4String hcName = "He3HitsCollection"; 
 
+  // FIXME: This won't compile
   He3TargetSD *he3SD = new He3TargetSD(sdName,hcName);
+
   G4SDManager::GetSDMpointer()->AddNewDetector(he3SD); 
   fLogicHe3->SetSensitiveDetector(he3SD); 
  

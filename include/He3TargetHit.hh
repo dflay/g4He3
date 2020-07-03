@@ -17,6 +17,7 @@
 #include "G4LogicalVolume.hh"
 #include "G4ios.hh"
 #include "G4Circle.hh"
+#include "G4SystemOfUnits.hh"
 
 class He3TargetHit : public G4VHit { 
 
@@ -67,10 +68,11 @@ class He3TargetHit : public G4VHit {
 
       inline void SetTime(G4double t)          { fHitTime = t; }  
       inline void SetEnergy(G4double e)        { fEnergy  = e; }  
+      inline void SetEdep(G4double e)          { fEdep    = e; } 
       inline void SetLStep(G4double l)         { fLStep   = l; } 
 
       inline void SetPID(G4int p)              { fPID     = p; }  
-      inline void SetMID(G4int m)              { fMID     = m; }  
+      inline void SetMID(G4int mid)            { fMID     = mid; }  
       inline void SetTrID(G4int t)             { fTRID    = t; }  
 
       inline void SetOTrIdx(G4int idx)         { fOTrIdx  = idx; }
@@ -86,6 +88,7 @@ class He3TargetHit : public G4VHit {
 
       inline G4double GetTime()                { return fHitTime; }  
       inline G4double GetEdep()                { return fEdep;    } 
+      inline G4double GetEnergy()              { return fEnergy;  } 
 
       inline G4int GetPID()                    { return fPID;     }  
       inline G4int GetMID()                    { return fMID;     }  

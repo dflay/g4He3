@@ -27,13 +27,13 @@ He3TargetHit::He3TargetHit(const He3TargetHit &rhs)
    fLabPos = rhs.fLabPos;
    fMom    = rhs.fMom;
 
-   hittime = rhs.fHitTime;
-   edep    = rhs.fEdep;
-   energy  = rhs.fEnergy;
+   fHitTime = rhs.fHitTime;
+   fEdep    = rhs.fEdep;
+   fEnergy  = rhs.fEnergy;
 
-   pid     = rhs.fPID;
-   mid     = rhs.fMID;
-   trid    = rhs.fTRID;
+   fPID     = rhs.fPID;
+   fMID     = rhs.fMID;
+   fTRID    = rhs.fTRID;
 
    //Original track info:
    fOTrIdx = rhs.fOTrIdx;
@@ -53,13 +53,13 @@ const He3TargetHit& He3TargetHit::operator=(const He3TargetHit &rhs){
    fLabPos = rhs.fLabPos;
    fMom    = rhs.fMom;
 
-   hittime = rhs.fHitTime;
-   edep    = rhs.fEdep;
-   energy  = rhs.fEnergy;
+   fHitTime = rhs.fHitTime;
+   fEdep    = rhs.fEdep;
+   fEnergy  = rhs.fEnergy;
 
-   pid     = rhs.fPID;
-   mid     = rhs.fMID;
-   trid    = rhs.fTRID;
+   fPID     = rhs.fPID;
+   fMID     = rhs.fMID;
+   fTRID    = rhs.fTRID;
 
    //Original track info:
    fOTrIdx = rhs.fOTrIdx;
@@ -80,8 +80,8 @@ G4int He3TargetHit::operator==(const He3TargetHit &rhs) const{
 //______________________________________________________________________________
 void He3TargetHit::Draw(){
    G4VVisManager *pVVisManager = G4VVisManager::GetConcreteInstance(); 
-   if( pVisManager ){ 
-      G4Cirlce circle(fLabPos); 
+   if( pVVisManager ){ 
+      G4Circle circle(fLabPos); 
       circle.SetScreenSize(5); 
       circle.SetFillStyle( G4Circle::filled ); 
       G4VisAttributes attr( G4Colour::Red() );

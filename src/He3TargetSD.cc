@@ -1,9 +1,10 @@
 #include "He3TargetSD.hh"
 //______________________________________________________________________________
 He3TargetSD::He3TargetSD(G4String name,G4String hcName)
-: G4VSensitiveDetector(name), fHitCollection(NULL) 
+: G4VSensitiveDetector(name)
 {
-   collectionName.insert(hcName); 
+   collectionName.insert(hcName);
+   fHitCollection = NULL;  
 }
 //______________________________________________________________________________
 He3TargetSD::~He3TargetSD(){
@@ -32,7 +33,7 @@ G4bool He3TargetSD::ProcessHits(G4Step *aStep,G4TouchableHistory *){
    // G4AffineTransform aTrans = hist->GetHistory()->GetTopTransform();
 
    hit->SetLabPos(pos); // global coordinates 
-   hit->SetVertex( aStep->GetTrack->GetVertexPosition() ); 
+   hit->SetVertex( aStep->GetTrack()->GetVertexPosition() ); 
    hit->SetTime( aStep->GetPreStepPoint()->GetGlobalTime() ); 
    
    hit->SetEdep(edep); 
@@ -52,14 +53,14 @@ G4bool He3TargetSD::ProcessHits(G4Step *aStep,G4TouchableHistory *){
    // hit->SetPTrIdx( SDtracks.InsertPrimaryTrackInformation( aTrack ) );
    // hit->SetSDTrIdx( SDtracks.InsertSDTrackInformation( aTrack ) ); 
  
-   hitCollection->insert(hit);
+   fHitCollection->insert(hit);
 
    return true;   
 }
 //______________________________________________________________________________
 void He3TargetSD::EndOfEvent(G4HCofThisEvent *hce){
    G4int hcid = G4SDManager::GetSDMpointer()->GetCollectionID(collectionName[0]); 
-   hce->AddHitsCollection(hcid,hitCollection); 
+   hce->AddHitsCollection(hcid,fHitCollection); 
 }
 //______________________________________________________________________________
 void He3TargetSD::Clear(){
