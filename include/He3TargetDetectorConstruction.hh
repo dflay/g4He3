@@ -84,7 +84,7 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
    // methods 
    G4Material *GetMaterial(G4String name);
 
-   void BuildGlassCell();
+   void BuildGlassCell(G4LogicalVolume *logicMother);
    void BuildPolarizedHe3();    
    void BuildBeam(G4LogicalVolume *logicMother); 
    void BuildPickupCoils(G4LogicalVolume *logicMother);    
@@ -96,7 +96,8 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
    int ConstructMaterials(); 
    int ReadData(const char *inpath);
    int SplitString(const char delim,const std::string inStr,std::vector<std::string> &out); 
-   int GetPart(const std::string partName,partParameters_t &data);  
+   int GetPart(const std::string partName,partParameters_t &data); 
+   int PrintPart(const partParameters_t data,std::string LEN="mm",std::string ANG="deg");  
 
 };
 

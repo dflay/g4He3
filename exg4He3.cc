@@ -67,7 +67,7 @@ int main(int argc,char** argv)
 
   // Set mandatory initialization classes
   // Detector construction
-  runManager->SetUserInitialization( new He3TargetDetectorConstruction(kSBS_GEN_368) );
+  runManager->SetUserInitialization( new He3TargetDetectorConstruction(kSBS_GEN_1018) );
 
   // Physics list
   G4VModularPhysicsList* physicsList = new QBBC;

@@ -169,32 +169,14 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   // //
   // fScoringVolume = logicShape2;
 
-  //---- glass cell ---- 
-  BuildGlassCell();
+  // glass cell
+  BuildGlassCell(logicWorld);
 
-  G4VisAttributes *visGC = new G4VisAttributes(); 
-  visGC->SetColour( G4Colour::White() );
-  visGC->SetForceWireframe(true);  
-  fLogicGlassCell->SetVisAttributes(visGC); 
-
-  // place the volume
-  // - note that this is relative to the *target chamber* as that is the first object in the union 
-  // - rotation puts the cell oriented such that the pumping chamber is vertically above
-  //   and the beam enters from the side where the small sphere on the transfer tube is 
-  //   closest to the upstream side 
-  G4ThreeVector P_tgt_o = G4ThreeVector(0.*cm,0.*cm,0.*cm);   
-  G4RotationMatrix *rm_gc = new G4RotationMatrix(); 
-  rm_gc->rotateX(0.*deg);  
-  rm_gc->rotateY(180.*deg);  
-  rm_gc->rotateZ(180.*deg); 
- 
-  new G4PVPlacement(rm_gc,P_tgt_o,fLogicGlassCell,"physGC",logicWorld,false,0,fCheckOverlaps);       
-
-  //---- Cu end windows for the target cell 
+  // Cu end windows for the target cell 
   BuildEndWindow("upstream"  ,logicWorld); 
   BuildEndWindow("downstream",logicWorld); 
 
-  // cylinder of polarized 3He
+  // cylinder of polarized 3He; logic mother is the glass cell
   BuildPolarizedHe3();
 
   // helmholtz coils
@@ -202,7 +184,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildHelmholtzCoils(fEXPConfig,"rfy",logicWorld);  
   BuildHelmholtzCoils(fEXPConfig,"min",logicWorld); 
 
-  // shield 
+  // magnetic shield 
   BuildShield(fEXPConfig,logicWorld); 
 
   // target ladder 
@@ -254,11 +236,15 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   // FIXME: - Check volume overlap with glass cell 
   //        - Check volume overlap on endcap; seems like rlip could use a + 0.5*mm offset 
 
+  // std::cout << "[He3TargetDetectorConstruction]: Building polarized 3He!" << std::endl;
+
   //---- target chamber component  
   partParameters_t tc; 
   GetPart("targetChamber",tc); 
   tc.r_max = tc.r_min; 
   tc.r_min = 0.*cm;
+
+  // PrintPart(tc); 
  
   G4Tubs *tcShape = new G4Tubs("He3_tc",
                                tc.r_min    ,tc.r_max,
@@ -275,6 +261,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   
   G4double z0 = 0.5*(tc.length + mshu.length);  
   mshu.z     = -z0;  
+  
+  // PrintPart(mshu); 
 
   G4Tubs *mainShaft_up = new G4Tubs(mshu.name,
 	                            mshu.r_min    ,mshu.r_max,
@@ -293,6 +281,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   lipu.r_max = lipu.r_min; 
   lipu.r_min = 0.*cm;  
   lipu.z     = -z0 - lipu.z;  
+  
+  // PrintPart(lipu); 
 
   G4Tubs *lip_up = new G4Tubs(lipu.name,
 	                      lipu.r_min    ,lipu.r_max,
@@ -312,6 +302,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   rlipu.r_min = 0.*cm; 
   rlipu.z     = -z0 - rlipu.z; // subtract an additional 0.5*mm?  
   rlipu.ry    = 180.*deg;  
+  
+  // PrintPart(rlipu); 
 
   G4Sphere *roundLip_up = new G4Sphere(rlipu.name,
 	                               rlipu.r_min     ,rlipu.r_max,
@@ -331,6 +323,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   ecu.r_min = 0.*cm;  
   ecu.z     = -z0 - ecu.z;  
   ecu.ry    = 180.*deg;  
+  
+  // PrintPart(ecu); 
 
   G4Sphere *endcap_up = new G4Sphere(ecu.name,
 	                             ecu.r_min     ,ecu.r_max,
@@ -349,6 +343,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   partParameters_t mshd = mshu;
   mshd.name = "mshd_dn"; 
   mshd.z *= -1.; 
+  
+  // PrintPart(mshd); 
 
   G4Tubs *mainShaft_dn = new G4Tubs(mshd.name,
 	                            mshd.r_min    ,mshd.r_max,
@@ -365,6 +361,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   partParameters_t lipd = lipu;
   lipd.name = "lipd_dn"; 
   lipd.z *= -1.;
+  
+  // PrintPart(lipd); 
 
   G4Tubs *lip_dn = new G4Tubs(lipd.name,
 	                      lipd.r_min    ,lipd.r_max,
@@ -382,6 +380,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   rlipd.name = "rlipd_dn"; 
   rlipd.z *= -1.; 
   rlipd.ry = 0.*deg; 
+  
+  // PrintPart(rlipd); 
 
   G4Sphere *roundLip_dn = new G4Sphere(rlipd.name,
 	                               rlipd.r_min     ,rlipd.r_max,
@@ -399,6 +399,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   ecd.name = "ecd_dn"; 
   ecd.z *= -1.; 
   ecd.ry = 0.*deg; 
+  
+  // PrintPart(ecd); 
 
   G4Sphere *endcap_dn = new G4Sphere(ecd.name,
 	                             ecd.r_min     ,ecd.r_max,
@@ -411,120 +413,15 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   rm_ecd->rotateY(ecd.ry);   
   rm_ecd->rotateZ(ecd.rz);  
 
-  // end window (upstream)
-  // combine info from lip, rlip, end cap to one object here
-  // try to make this a simple union of a cylinder and a hemisphere.  
-  // TODO: may need something more involved later... 
-
-  // // build the "base" -- combines end window main shaft + lip   
-  // partParameters_t mshu;
-  // GetPart("ew_mainShaft_up",mshu);
-
-  // partParameters_t lipu;
-  // GetPart("ew_lip_up",lipu);
-
-  // partParameters_t baseu; 
-  // baseu.name       = "He3_base_u"; 
-  // baseu.r_max      = tc.r_max; // mshu.r_min; 
-  // baseu.r_min      = 0.*cm;
-  // baseu.length     = mshu.length + lipu.length;  
-  // baseu.x          = 0.*cm; 
-  // baseu.y          = 0.*cm; 
-  // baseu.z          = (-1.)*( 0.5*tc.length + 0.5*baseu.length ); 
-  // baseu.startTheta = 0.*deg; 
-  // baseu.dTheta     = 0.*deg; 
-  // baseu.startPhi   = 0.*deg; 
-  // baseu.dPhi       = 360.*deg; 
-
-  // G4Tubs *base_u = new G4Tubs(baseu.name,
-  //                             baseu.r_min    ,baseu.r_max,
-  //                             baseu.length/2.,
-  //                             baseu.startPhi ,baseu.dPhi);
-
-  // G4ThreeVector P_baseu      = G4ThreeVector(baseu.x,baseu.y,baseu.z);  
-  // G4RotationMatrix *rm_baseu = new G4RotationMatrix();
-  // rm_baseu->rotateX(baseu.rx);   
-  // rm_baseu->rotateY(baseu.ry);   
-  // rm_baseu->rotateZ(baseu.rz);   
-  // 
-  // // hemisphere
-  // partParameters_t hspu; 
-  // hspu.name       = "He3_hspu"; 
-  // hspu.r_max      = tc.r_max;  
-  // hspu.r_min      = 0.*cm;
-  // hspu.length     = 0.*cm;  
-  // hspu.x          = 0.*cm; 
-  // hspu.y          = 0.*cm; 
-  // hspu.z          = baseu.z - 0.5*hspu.r_max; 
-  // hspu.rx         = 0.*deg; 
-  // hspu.ry         = 180.*deg; 
-  // hspu.rz         = 0.*deg; 
-  // hspu.startTheta = 0.*deg; 
-  // hspu.dTheta     = 90.*deg; 
-  // hspu.startPhi   = 0.*deg; 
-  // hspu.dPhi       = 360.*deg; 
-
-  // G4Sphere *hSphere_u = new G4Sphere(hspu.name,
-  //                                    hspu.r_min      ,hspu.r_max,
-  //                                    hspu.startPhi   ,hspu.dPhi,
-  //                                    hspu.startTheta ,hspu.dTheta);
-
-  // G4ThreeVector P_hspu      = G4ThreeVector(hspu.x,hspu.y,hspu.z);  
-  // G4RotationMatrix *rm_hspu = new G4RotationMatrix();
-  // rm_hspu->rotateX(hspu.rx);   
-  // rm_hspu->rotateY(hspu.ry);   
-  // rm_hspu->rotateZ(hspu.rz);   
-
-  // downstream 
-  // partParameters_t based = baseu; 
-  // based.name = "He3_base_d"; 
-  // based.z *= (-1.); 
-
-  // G4Tubs *base_d = new G4Tubs(based.name,
-  //                             based.r_min    ,based.r_max,
-  //                             based.length/2.,
-  //                             based.startPhi ,based.dPhi);
-
-  // G4ThreeVector P_based      = G4ThreeVector(based.x,based.y,based.z);  
-  // G4RotationMatrix *rm_based = new G4RotationMatrix();
-  // rm_based->rotateX(based.rx);   
-  // rm_based->rotateY(based.ry);   
-  // rm_based->rotateZ(based.rz);   
-
-  // partParameters_t hspd = hspu;
-  // hspd.name  = "He3_hspd";  
-  // hspd.z    *= (-1.); 
-  // hspd.ry    = 0.*deg;
-
-  // G4Sphere *hSphere_d = new G4Sphere(hspd.name,
-  //                                    hspd.r_min      ,hspd.r_max,
-  //                                    hspd.startPhi   ,hspd.dPhi,
-  //                                    hspd.startTheta ,hspd.dTheta);
-
-  // G4ThreeVector P_hspd      = G4ThreeVector(hspd.x,hspd.y,hspd.z);  
-  // G4RotationMatrix *rm_hspd = new G4RotationMatrix();
-  // rm_hspd->rotateX(hspd.rx);   
-  // rm_hspd->rotateY(hspd.ry);   
-  // rm_hspd->rotateZ(hspd.rz);   
-
   // Union solid 
   // use same rotation and positional vectors as glass shell!  
   G4UnionSolid *he3Tube;
-  // // target chamber + base upstream  
-  // he3Tube = new G4UnionSolid("tc_bu"     ,tcShape,base_u   ,rm_baseu,P_baseu);
-  // // assembly + hsphere upstream 
-  // he3Tube = new G4UnionSolid("tc_bhu"    ,he3Tube,hSphere_u,rm_hspu,P_hspu);  
-  // // assembly + base downstream 
-  // he3Tube = new G4UnionSolid("tcbhu_hspd",he3Tube,base_d   ,rm_based,P_based);  
-  // // assembly + hsphere downstream 
-  // he3Tube = new G4UnionSolid("heTube"    ,he3Tube,hSphere_d,rm_hspd,P_hspd);  
-
-  // more complicated geometry 
+  // main shaft + upstream "window"  
   he3Tube = new G4UnionSolid("tc_um"        ,tcShape,mainShaft_up,rm_mshu ,P_mshu );
   he3Tube = new G4UnionSolid("tc_uml"       ,he3Tube,lip_up      ,rm_lipu ,P_lipu );
   he3Tube = new G4UnionSolid("tc_umlr"      ,he3Tube,roundLip_up ,rm_rlipu,P_rlipu);
   he3Tube = new G4UnionSolid("tc_umlre"     ,he3Tube,endcap_up   ,rm_ecu  ,P_ecu  );
-  // upstream end window  
+  // downstream end window  
   he3Tube = new G4UnionSolid("tc_umlre_dm"  ,he3Tube,mainShaft_dn,rm_mshd ,P_mshd );
   he3Tube = new G4UnionSolid("tc_umlre_dml" ,he3Tube,lip_dn      ,rm_lipd ,P_lipd );
   he3Tube = new G4UnionSolid("tc_umlre_dmlr",he3Tube,roundLip_dn ,rm_rlipd,P_rlipd);
@@ -539,15 +436,15 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   fLogicHe3 = new G4LogicalVolume(he3Tube,GetMaterial("He3"),"logicHe3");  
   fLogicHe3->SetVisAttributes(visHe3);  
 
+  // NOTE: We're not doing this anymore; too computationally expensive/not needed  
   // register the sensitive detector
-  G4String sdName = "He3Target/He3"; 
-  G4String hcName = "He3HitsCollection"; 
+  // G4String sdName = "He3Target/He3"; 
+  // G4String hcName = "He3HitsCollection"; 
 
-  // FIXME: This won't compile
-  He3TargetSD *he3SD = new He3TargetSD(sdName,hcName);
+  // He3TargetSD *he3SD = new He3TargetSD(sdName,hcName);
 
-  G4SDManager::GetSDMpointer()->AddNewDetector(he3SD); 
-  fLogicHe3->SetSensitiveDetector(he3SD); 
+  // G4SDManager::GetSDMpointer()->AddNewDetector(he3SD); 
+  // fLogicHe3->SetSensitiveDetector(he3SD); 
  
   // placement of He3 is *inside target chamber*  
   G4ThreeVector posHe3 = G4ThreeVector(0.*cm,0.*cm,0.*cm);
@@ -567,6 +464,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
 //______________________________________________________________________________
 void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4LogicalVolume *logicMother){
    // build the metal end window based on type = upstream or downstream 
+
+   // std::cout << "********************** BUILDING " << type << std::endl;
 
    int index=-1;  // index for logic array
    std::string suffix; 
@@ -588,7 +487,9 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
 
    // build the main shaft 
    partParameters_t msh;
-   GetPart(ms_str.c_str(),msh); 
+   GetPart(ms_str.c_str(),msh);
+
+   // PrintPart(msh);  
 
    G4Tubs *mainShaft = new G4Tubs(msh.name,
 	                          msh.r_min    ,msh.r_max,
@@ -604,6 +505,8 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    // lip  
    partParameters_t lip;
    GetPart(l_str.c_str(),lip); 
+   
+   // PrintPart(lip);  
 
    G4Tubs *lipTube = new G4Tubs(lip.name,
 	                        lip.r_min    ,lip.r_max,
@@ -619,6 +522,8 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    // rounded lip 
    partParameters_t rlip;
    GetPart(rl_str.c_str(),rlip); 
+   
+   // PrintPart(rlip);  
 
    G4Sphere *roundLip = new G4Sphere(rlip.name,
 	                             rlip.r_min     ,rlip.r_max,
@@ -634,6 +539,8 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    // endcap 
    partParameters_t ec;
    GetPart(c_str.c_str(),ec); 
+   
+   // PrintPart(ec);  
 
    G4Sphere *endcap = new G4Sphere(ec.name,
 	                           ec.r_min     ,ec.r_max,
@@ -671,7 +578,10 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
 
    // place it at the end of the target chamber 
    partParameters_t tc; 
-   GetPart("targetChamber",tc); 
+   GetPart("targetChamber",tc);
+
+   // PrintPart(tc); 
+ 
    G4double x_ew = 0.*cm; 
    G4double y_ew = 0.*cm;   
    G4double z_ew = (tc.length/2. + 0.5*msh.length);  // this will make the large lip flush with the glass
@@ -718,7 +628,9 @@ void He3TargetDetectorConstruction::BuildShield(int config,G4LogicalVolume *logi
 
    // get outer box dimensions  
    partParameters_t sh; 
-   GetPart("shield",sh); 
+   GetPart("shield",sh);
+
+   // PrintPart(sh);  
 
    //---- window cuts
    // FIXME: these will change!     
@@ -906,7 +818,9 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    //---- vertical posts along y axis 
    // upstream 
    partParameters_t lvu; 
-   GetPart("ladder_vert_up",lvu); 
+   GetPart("ladder_vert_up",lvu);
+
+   // PrintPart(lvu);  
 
    G4Box *ladder_vert_up    = new G4Box("lvu",lvu.x_len/2.,lvu.y_len/2.,lvu.z_len/2.);
    G4ThreeVector P_lvu      = G4ThreeVector(lvu.x,lvu.y,lvu.z);  
@@ -916,6 +830,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    // downstream 
    partParameters_t lvd; 
    GetPart("ladder_vert_dn",lvd); 
+   
+   // PrintPart(lvd);  
 
    G4Box *ladder_vert_dn    = new G4Box("lvd",lvd.x_len/2.,lvd.y_len/2.,lvd.z_len/2.);
    G4ThreeVector P_lvd      = G4ThreeVector(lvd.x,lvd.y,lvd.z);  
@@ -925,6 +841,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    //---- horizontal posts along z axis 
    partParameters_t la;  
    GetPart("ladder_above",la); 
+   
+   // PrintPart(la);  
 
    G4Box *ladder_above     = new G4Box("la",la.x_len/2.,la.y_len/2.,la.z_len/2.);
    G4ThreeVector P_la      = G4ThreeVector(la.x,la.y,la.z);  
@@ -935,6 +853,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    // FIXME: This is an approximated length in z!
    partParameters_t lb; 
    GetPart("ladder_below",lb); 
+   
+   // PrintPart(lb);  
 
    G4Box *ladder_below     = new G4Box("lb",lb.x_len/2.,lb.y_len/2.,lb.z_len/2.);
    G4ThreeVector P_lb      = G4ThreeVector(lb.x,lb.y,lb.z);  
@@ -944,6 +864,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    //---- angular part above, along z axis, upstream 
    partParameters_t aau; 
    GetPart("ladder_ang_above_up",aau); 
+   
+   // PrintPart(aau);  
 
    G4Box *ladder_aau        = new G4Box("aau",aau.x_len/2.,aau.y_len/2.,aau.z_len/2.);
    G4ThreeVector P_aau      = G4ThreeVector(aau.x,aau.y,aau.z);  
@@ -954,6 +876,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    partParameters_t aad; 
    GetPart("ladder_ang_above_dn",aad); 
 
+   // PrintPart(aad);  
+
    G4Box *ladder_aad        = new G4Box("aad",aad.x_len/2.,aad.y_len/2.,aad.z_len/2.);
    G4ThreeVector P_aad      = G4ThreeVector(aad.x,aad.y,aad.z);  
    G4RotationMatrix *rm_aad = new G4RotationMatrix(); 
@@ -962,6 +886,8 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    //---- angular part below, along z axis, upstream 
    partParameters_t abu; 
    GetPart("ladder_ang_below_up",abu); 
+   
+   // PrintPart(abu);  
 
    G4Box *ladder_abu        = new G4Box("abu",abu.x_len/2.,abu.y_len/2.,abu.z_len/2.);
    G4ThreeVector P_abu      = G4ThreeVector(abu.x,abu.y,abu.z);  
@@ -970,7 +896,9 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
 
    //---- angular part below, along z axis, downstream 
    partParameters_t abd; 
-   GetPart("ladder_ang_below_dn",abd); 
+   GetPart("ladder_ang_below_dn",abd);
+
+   // PrintPart(abd);  
 
    G4Box *ladder_abd        = new G4Box("abd",abd.x_len/2.,abd.y_len/2.,abd.z_len/2.);
    G4ThreeVector P_abd      = G4ThreeVector(abd.x,abd.y,abd.z);  
@@ -1036,6 +964,8 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
    partParameters_t cbul; 
    GetPart("pu_coil_base",cbul);
 
+   // PrintPart(cbul); 
+
    G4Box *coilB = new G4Box("coilB",cbul.x_len/2.,cbul.y_len/2.,cbul.z_len/2.); 
 
    // U-cut: create a *subtraction* with a component for a U shape  
@@ -1051,7 +981,9 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
  
    // now the coil itself 
    partParameters_t pu;
-   GetPart("pu_coil",pu); 
+   GetPart("pu_coil",pu);
+
+   // PrintPart(pu);  
 
    G4Box *coilOuter = new G4Box("coilOuter",pu.x_len/2.,pu.y_len/2.,pu.z_len/2.);
 
@@ -1068,6 +1000,8 @@ void He3TargetDetectorConstruction::BuildPickupCoils(G4LogicalVolume *logicMothe
    // ok, now we use the *coil* to do a cut on the coil mount (this is where the coil will sit)
    partParameters_t cmul; 
    GetPart("pu_coil_mnt",cmul);
+   
+   // PrintPart(cmul); 
    
    G4Box *coilMnt = new G4Box("cmnt",cmul.x_len/2.,cmul.y_len/2.,cmul.z_len/2.); 
 
@@ -1192,6 +1126,8 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    //   - coil 1 (placed at -D/2) 
    //   - coil 2 (placed at +D/2)
    // - drawing number: A09016-03-08-0000
+   
+   // std::cout << "********************** BUILDING HELMHOLTZ " << type << std::endl;
 
    char partName[14];
    char coilName_n[200],coilName_p[200];   // shape name 
@@ -1223,7 +1159,10 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
    GetPart(partName,cn); 
    cp = cn;
    cn.name = coilName_n;  
-   cp.name = coilName_p;  
+   cp.name = coilName_p; 
+
+   // PrintPart(cn);  
+   // PrintPart(cp);  
 
    // coil parameters   
    G4double D      = 0.5*(cn.r_min + cn.r_max);          // helmholtz separation D = R = 0.5(rmin + rmax) 
@@ -1241,7 +1180,9 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
     cns.r_max    = cn.r_max + shWall; 
     cns.length   = cn.length + 2.*shWall; // this is so we have the wall on both sides
     cns.startPhi = 0.*deg;
-    cns.dPhi     = 360.*deg;   
+    cns.dPhi     = 360.*deg;  
+
+    // PrintPart(cns); 
   
     G4Tubs *cnsTube = new G4Tubs(cns.name,
                                  cns.r_min    ,cns.r_max,
@@ -1255,6 +1196,8 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
     cps.length   = cp.length + 2.*shWall; // this is so we have the wall on both sides
     cps.startPhi = 0.*deg;
     cps.dPhi     = 360.*deg;   
+    
+    // PrintPart(cps); 
  
     G4Tubs *cpsTube = new G4Tubs(cps.name,
  	                         cps.r_min    ,cps.r_max,
@@ -1434,13 +1377,15 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 
 }
 //______________________________________________________________________________
-void He3TargetDetectorConstruction::BuildGlassCell(){
+void He3TargetDetectorConstruction::BuildGlassCell(G4LogicalVolume *logicMother){
    // construct the glass cell of the target
    // - transfer tube dimensions based on JT file 
 
    //---- pumping chamber ----
    partParameters_t pumpCh;
-   GetPart("pumpingChamber",pumpCh); 
+   GetPart("pumpingChamber",pumpCh);
+
+   // PrintPart(pumpCh); 
 
    G4Sphere *pumpChamberShape = new G4Sphere(pumpCh.name,
 	                                     pumpCh.r_min     ,pumpCh.r_max,
@@ -1458,6 +1403,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
 
    partParameters_t tgtCh;
    GetPart("targetChamber",tgtCh); 
+   
+   // PrintPart(tgtCh); 
 
    G4Tubs *targetChamberShape = new G4Tubs(tgtCh.name,
 	                                   tgtCh.r_min    ,tgtCh.r_max,
@@ -1470,42 +1417,12 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    rm_tc->rotateY(tgtCh.ry); 
    rm_tc->rotateZ(tgtCh.rz); 
 
-   // //---- end window on target chamber, downstream ----  
-
-   // partParameters_t ewDn;
-   // GetPart("endWindow_dn",ewDn); 
-
-   // G4Sphere *endWindowShapeDn = new G4Sphere(ewDn.name,
-   //       ewDn.r_min     ,ewDn.r_max,
-   //       ewDn.startPhi  ,ewDn.dPhi, 
-   //       ewDn.startTheta,ewDn.dTheta); 
-
-   // G4ThreeVector P_ewd = G4ThreeVector(ewDn.x,ewDn.y,ewDn.z); 
-   // G4RotationMatrix *rm_ewd = new G4RotationMatrix();
-   // rm_ewd->rotateX(ewDn.rx); 
-   // rm_ewd->rotateY(ewDn.ry); 
-   // rm_ewd->rotateZ(ewDn.rz); 
-
-   // //---- end window on target chamber, upstream ----  
-
-   // partParameters_t ewUp;
-   // GetPart("endWindow_up",ewUp); 
-
-   // G4Sphere *endWindowShapeUp = new G4Sphere(ewUp.name,
-   //       ewUp.r_min     ,ewUp.r_max,
-   //       ewUp.startPhi  ,ewUp.dPhi, 
-   //       ewUp.startTheta,ewUp.dTheta); 
-
-   // G4ThreeVector P_ewu = G4ThreeVector(ewUp.x,ewUp.y,ewUp.z); 
-   // G4RotationMatrix *rm_ewu = new G4RotationMatrix();
-   // rm_ewu->rotateX(ewUp.rx); 
-   // rm_ewu->rotateY(ewUp.ry); 
-   // rm_ewu->rotateZ(ewUp.rz); 
-
    //---- transfer tube elbow, downstream 
 
    partParameters_t tted; 
    GetPart("transTubeEl_dn",tted); 
+   
+   // PrintPart(tted); 
 
    G4Torus *transTubeElDnShape = new G4Torus(tted.name,
 	                                     tted.r_min   ,tted.r_max,tted.r_tor,
@@ -1520,6 +1437,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube elbow, upstream 
    partParameters_t tteu; 
    GetPart("transTubeEl_up",tteu); 
+   
+   // PrintPart(tteu);  
 
    G4Torus *transTubeElUpShape = new G4Torus(tteu.name,
 	 tteu.r_min     ,tteu.r_max,tteu.r_tor,
@@ -1534,6 +1453,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube elbow, downstream lower  
    partParameters_t ttedl; 
    GetPart("transTubeElLo_dn",ttedl); 
+   
+   // PrintPart(ttedl);  
 
    G4Torus *transTubeElDnLoShape = new G4Torus(ttedl.name,
 	 ttedl.r_min     ,ttedl.r_max,ttedl.r_tor,
@@ -1548,6 +1469,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube elbow, upstream lower  
    partParameters_t tteul; 
    GetPart("transTubeElLo_up",tteul); 
+   
+   // PrintPart(tteul);  
 
    G4Torus *transTubeElUpLoShape = new G4Torus(tteul.name,
 	 tteul.r_min     ,tteul.r_max,tteul.r_tor,
@@ -1562,6 +1485,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube sphere --- 
    partParameters_t tts; 
    GetPart("transTubeSphere",tts);
+   
+   // PrintPart(tts);  
 
    G4Sphere *transTubeSphere = new G4Sphere(tts.name,
 	 tts.r_min     ,tts.r_max,
@@ -1577,6 +1502,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube: upstream, along z ---
    partParameters_t ttuz; 
    GetPart("transTubeZ_up",ttuz);
+   
+   // PrintPart(ttuz);  
 
    G4Tubs *transTubeUpZShape = new G4Tubs(ttuz.name,
 	 ttuz.r_min    ,ttuz.r_max,
@@ -1592,6 +1519,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube: upstream, along y ----  
    partParameters_t ttuy; 
    GetPart("transTubeY_up",ttuy);
+   
+   // PrintPart(ttuy);  
 
    G4Tubs *transTubeUpYShape = new G4Tubs(ttuy.name,
 	 ttuy.r_min    ,ttuy.r_max,
@@ -1607,6 +1536,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube: downstream, along z ---
    partParameters_t ttdz; 
    GetPart("transTubeZ_dn",ttdz);
+
+   // PrintPart(ttdz);  
 
    G4Tubs *transTubeDnZShape = new G4Tubs(ttdz.name,
 	 ttdz.r_min    ,ttdz.r_max,
@@ -1627,6 +1558,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    // long (below) 
    partParameters_t ttdby; 
    GetPart("transTubeYB_dn",ttdby);
+   
+   // PrintPart(ttdby);  
 
    G4Tubs *transTubeDnBYShape = new G4Tubs(ttdby.name,
 	 ttdby.r_min    ,ttdby.r_max,
@@ -1642,6 +1575,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    // short (above) 
    partParameters_t ttday; 
    GetPart("transTubeYA_dn",ttday);
+   
+   // PrintPart(ttday);  
 
    G4Tubs *transTubeDnAYShape = new G4Tubs(ttday.name,
 	 ttday.r_min    ,ttday.r_max,
@@ -1657,6 +1592,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube post: downstream, along y ---- 
    partParameters_t ttpdy; 
    GetPart("transTubePost_dn",ttpdy);
+   
+   // PrintPart(ttpdy);  
 
    G4Tubs *transTubePostDnShape = new G4Tubs(ttpdy.name,
 	 ttpdy.r_min    ,ttpdy.r_max,
@@ -1672,6 +1609,8 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    //---- transfer tube post: upstream, along y ----  
    partParameters_t ttpuy; 
    GetPart("transTubePost_up",ttpuy);
+   
+   // PrintPart(ttpuy);  
 
    G4Tubs *transTubePostUpShape = new G4Tubs(ttpuy.name,
 	 ttpuy.r_min    ,ttpuy.r_max,
@@ -1731,6 +1670,24 @@ void He3TargetDetectorConstruction::BuildGlassCell(){
    glassCell = new G4UnionSolid("glassCell",glassCell,pumpChamberShape,rm_pc,P_pc);
 
    fLogicGlassCell = new G4LogicalVolume(glassCell,GetMaterial("GE180"),"logicGlassCell");
+
+   G4VisAttributes *visGC = new G4VisAttributes(); 
+   visGC->SetColour( G4Colour::White() );
+   visGC->SetForceWireframe(true);  
+   fLogicGlassCell->SetVisAttributes(visGC); 
+
+   // place the volume
+   // - note that this is relative to the *target chamber* as that is the first object in the union 
+   // - rotation puts the cell oriented such that the pumping chamber is vertically above
+   //   and the beam enters from the side where the small sphere on the transfer tube is 
+   //   closest to the upstream side 
+   G4ThreeVector P_tgt_o = G4ThreeVector(0.*cm,0.*cm,0.*cm);   
+   G4RotationMatrix *rm_gc = new G4RotationMatrix(); 
+   rm_gc->rotateX(0.*deg);  
+   rm_gc->rotateY(180.*deg);  
+   rm_gc->rotateZ(180.*deg); 
+
+   new G4PVPlacement(rm_gc,P_tgt_o,fLogicGlassCell,"physGC",logicMother,false,0,fCheckOverlaps);       
 
 }
 //______________________________________________________________________________
@@ -2011,6 +1968,70 @@ int He3TargetDetectorConstruction::ReadData(const char *inpath){
       // clean up
       col.clear();
    }
+   return 0;
+}
+//______________________________________________________________________________
+int He3TargetDetectorConstruction::PrintPart(const partParameters_t data,std::string LEN,std::string ANG){
+
+   // we use this mainly to transfer everything over to g4sbs
+   // this makes cutting and pasting easier 
+
+   double sf_len=1.; 
+   if( LEN.compare("m")==0 ){
+      sf_len = m;
+   }else if( LEN.compare("cm")==0 ){
+      sf_len = cm;
+   }else if( LEN.compare("mm")==0 ){
+      sf_len = mm;
+   }else if( LEN.compare("inch")==0 ){
+      sf_len = 25.4*mm;
+   }else{
+      std::cout << "[He3TargetDetectorConstruction::PrintPart]: Invalid unit = " << LEN << std::endl;
+      return 1;
+   }
+
+   double sf_ang=1.;
+   if( ANG.compare("rad")==0 ){
+      sf_ang = rad;
+   }else if( ANG.compare("deg")==0 ){
+      sf_ang = deg;
+   }else{
+      std::cout << "[He3TargetDetectorConstruction::PrintPart]: Invalid unit = " << ANG << std::endl;
+      return 1;
+   }
+
+   char msg[200]; 
+
+   std::cout << "---------------------------------------------" << std::endl;
+   sprintf(msg,"data.name = \"%s\"; data.shape = \"%s\";",data.name.c_str(),data.shape.c_str()); 
+   std::cout << msg << std::endl;
+ 
+   sprintf(msg,"data.r_tor = %.1lf*%s; data.r_min = %.1lf*%s; data.r_max = %.1lf*%s; data.length = %.1lf*%s;"
+              ,data.r_tor/sf_len ,LEN.c_str(),data.r_min/sf_len,LEN.c_str(),data.r_max/sf_len,LEN.c_str()
+              ,data.length/sf_len,LEN.c_str());       
+   std::cout << msg << std::endl;
+
+   sprintf(msg,"data.x_len = %.1lf*%s; data.y_len = %.1lf*%s; data.z_len = %.1lf*%s;"
+              ,data.x_len/sf_len ,LEN.c_str(),data.y_len/sf_len,LEN.c_str(),data.z_len/sf_len,LEN.c_str());       
+   std::cout << msg << std::endl;
+
+   sprintf(msg,"data.startTheta = %.1lf*%s; data.dTheta = %.1lf*%s;"
+              ,data.startTheta/sf_ang,ANG.c_str(),data.dTheta/sf_ang,ANG.c_str());      
+   std::cout << msg << std::endl;
+
+   sprintf(msg,"data.startPhi = %.1lf*%s; data.dPhi = %.1lf*%s;"
+              ,data.startPhi/sf_ang,ANG.c_str(),data.dPhi/sf_ang,ANG.c_str());      
+   std::cout << msg << std::endl;
+
+   sprintf(msg,"data.x = %.1lf*%s; data.y = %.1lf*%s; data.z = %.1lf*%s;"
+              ,data.x/sf_len ,LEN.c_str(),data.y/sf_len,LEN.c_str(),data.z/sf_len,LEN.c_str());       
+   std::cout << msg << std::endl;
+
+   sprintf(msg,"data.rx = %.1lf*%s; data.ry = %.1lf*%s; data.rz = %.1lf*%s;"
+              ,data.rx/sf_ang,ANG.c_str(),data.ry/sf_ang,ANG.c_str(),data.rz/sf_ang,ANG.c_str());       
+   std::cout << msg << std::endl;
+
+   std::cout << "---------------------------------------------" << std::endl; 
    return 0;
 }
 //______________________________________________________________________________
