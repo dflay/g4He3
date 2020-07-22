@@ -1806,16 +1806,14 @@ int He3TargetDetectorConstruction::ConstructMaterials(){
    fMaterialsMap["Stainless_Steel"] = Steel; 
 
    // AISI 1008 carbon steel
-   // details from https://www.azom.com/article.aspx?ArticleID=6538
-   // assuming the composition with 0.06% C, 0.38% Mn, 0.01% Si for a density of 7.782*g/cm3    
-   // NOTE: will throw a warning because this doesn't add to 100%
-   G4Material *Carbon_Steel_1008 = new G4Material("Carbon_Steel_1008",7.872*g/cm3,6); 
-   Carbon_Steel_1008->AddElement(elFe,0.9905);   
-   Carbon_Steel_1008->AddElement(elMn,0.0038);  
-   Carbon_Steel_1008->AddElement(elC ,0.0006); 
+   // details from http://www.iron-foundry.com/AISI-1008-SAE-UNS-G10080-Carbon-Steel-Foundry.html
+   // NOTE: will throw a warning because this doesn't add to 100% (adds to 99.8%)
+   G4Material *Carbon_Steel_1008 = new G4Material("Carbon_Steel_1008",7.872*g/cm3,5); 
+   Carbon_Steel_1008->AddElement(elFe,0.9931);   
+   Carbon_Steel_1008->AddElement(elMn,0.0030);  
+   Carbon_Steel_1008->AddElement(elC ,0.0010); 
    Carbon_Steel_1008->AddElement(elS ,0.0005); 
    Carbon_Steel_1008->AddElement(elP ,0.0004); 
-   Carbon_Steel_1008->AddElement(elSi,0.0001); 
    fMaterialsMap["Carbon_Steel_1008"] = Carbon_Steel_1008; 
 
    // print for confirmation
