@@ -1842,16 +1842,7 @@ int He3TargetDetectorConstruction::GetPart(const std::string partName,partParame
 
    if(found && fDebug){
       std::cout << "[He3TargetDetectorConstruction::GetPart]: FOUND part: " << std::endl;
-      std::cout << " name: " << data.name << " shape: " << data.shape << std::endl;
-      std::cout << " len unit: " << data.len_unit << " ang unit: " << data.ang_unit << std::endl;
-      std::cout << " major radius (torus): " << data.r_tor << std::endl;
-      std::cout << " min radius: " << data.r_min << " max radius: " << data.r_max << std::endl; 
-      std::cout << " length: " << data.length << std::endl; 
-      std::cout << " THETA start theta: " << data.startTheta << " d theta: " << data.dTheta << std::endl; 
-      std::cout << " PHI start phi: " << data.startPhi   << " d phi: "   << data.dPhi << std::endl; 
-      std::cout << " POS x: " << data.x << " y: " << data.y << " z: " << data.z << std::endl; 
-      std::cout << " ROT rx: " << data.rx << " ry: " << data.ry << " rz: " << data.rz << std::endl; 
-      std::cout << "------------------------------------------------------" << std::endl; 
+      PrintPart(data); 
    }
 
    if(!found){
