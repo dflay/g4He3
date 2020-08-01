@@ -177,7 +177,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildEndWindow("downstream",logicWorld); 
 
   // cylinder of polarized 3He; logic mother is the glass cell
-  BuildPolarizedHe3();
+  BuildPolarizedHe3(logicWorld);
 
   // helmholtz coils
   BuildHelmholtzCoils(fEXPConfig,"maj",logicWorld);  
@@ -231,7 +231,7 @@ void He3TargetDetectorConstruction::BuildBeam(G4LogicalVolume *logicMother){
 
 }
 //______________________________________________________________________________
-void He3TargetDetectorConstruction::BuildPolarizedHe3(){
+void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMother){
   // build the polarized 3He logical volume and place it in the logicMother 
   // FIXME: - Check volume overlap with glass cell 
   //        - Check volume overlap on endcap; seems like rlip could use a + 0.5*mm offset 
@@ -255,13 +255,14 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
 
   // build the main shaft 
   partParameters_t mshu;
-  GetPart("ew_mainShaft_up",mshu);
-  mshu.r_max = mshu.r_min;   
+  GetPart("ew_mainShaft",mshu);
+  mshu.name  = "ew_mainShaft_up"; 
+  mshu.r_max = tc.r_max; // mshu.r_min;   
   mshu.r_min = 0.*cm;  
   
   G4double z0 = 0.5*(tc.length + mshu.length);  
-  mshu.z     = -z0;  
-  
+  mshu.z      = -z0;  
+ 
   // PrintPart(mshu); 
 
   G4Tubs *mainShaft_up = new G4Tubs(mshu.name,
@@ -277,7 +278,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
 
   // lip  
   partParameters_t lipu;
-  GetPart("ew_lip_up",lipu);
+  GetPart("ew_lip",lipu);
+  lipu.name  = "ew_lip_up"; 
   lipu.r_max = lipu.r_min; 
   lipu.r_min = 0.*cm;  
   lipu.z     = -z0 - lipu.z;  
@@ -297,7 +299,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
 
   // rounded lip 
   partParameters_t rlipu;
-  GetPart("ew_rlip_up",rlipu); 
+  GetPart("ew_rlip",rlipu); 
+  rlipu.name  = "ew_rlip_up"; 
   rlipu.r_max = rlipu.r_min; 
   rlipu.r_min = 0.*cm; 
   rlipu.z     = -z0 - rlipu.z; // subtract an additional 0.5*mm?  
@@ -318,7 +321,8 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
 
   // endcap 
   partParameters_t ecu;
-  GetPart("ew_cap_up",ecu);
+  GetPart("ew_cap",ecu);
+  ecu.name  = "ew_cap_up"; 
   ecu.r_max = ecu.r_min;
   ecu.r_min = 0.*cm;  
   ecu.z     = -z0 - ecu.z;  
@@ -336,6 +340,29 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   rm_ecu->rotateX(ecu.rx);   
   rm_ecu->rotateY(ecu.ry);   
   rm_ecu->rotateZ(ecu.rz);  
+
+  // single hemisphere instead of the two sphere segments 
+  partParameters_t segu; 
+  segu.name       = "ew_seg_up";
+  segu.r_max      = 0.4855*25.4*mm; 
+  segu.r_min      = 0.*mm;
+  segu.startTheta = 0.*deg; 
+  segu.dTheta     = 90.*deg; 
+  segu.startPhi   = 0.*deg; 
+  segu.dPhi       = 360.*deg;
+  segu.z          = rlipu.z; // -1.*z0 - rlipu.z;
+  segu.ry         = 180.*deg; 
+
+  G4Sphere *seg_up = new G4Sphere(segu.name,
+	                          segu.r_min     ,segu.r_max,
+	                          segu.startPhi  ,segu.dPhi,
+	                          segu.startTheta,segu.dTheta); 
+ 
+  G4ThreeVector P_segu = G4ThreeVector(segu.x,segu.y,segu.z); 
+  G4RotationMatrix *rm_segu = new G4RotationMatrix();
+  rm_segu->rotateX(segu.rx);   
+  rm_segu->rotateY(segu.ry);   
+  rm_segu->rotateZ(segu.rz);   
 
   //---- end window (downstream, new)
 
@@ -413,24 +440,46 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
   rm_ecd->rotateY(ecd.ry);   
   rm_ecd->rotateZ(ecd.rz);  
 
+  // single hemisphere instead of the two sphere segments 
+  partParameters_t segd = segu; 
+  segd.name = "ew_seg_dn";
+  segd.z   *= -1.;
+  segd.ry   = 0.*deg;
+
+  std::cout << "SEGU Z = " << segu.z/cm << " cm" << std::endl;  
+  std::cout << "SEGD Z = " << segd.z/cm << " cm" << std::endl;  
+
+  G4Sphere *seg_dn = new G4Sphere(segd.name,
+	                          segd.r_min     ,segd.r_max,
+	                          segd.startPhi  ,segd.dPhi,
+	                          segd.startTheta,segd.dTheta); 
+ 
+  G4ThreeVector P_segd = G4ThreeVector(segd.x,segd.y,segd.z); 
+  G4RotationMatrix *rm_segd = new G4RotationMatrix();
+  rm_segd->rotateX(segd.rx);   
+  rm_segd->rotateY(segd.ry);   
+  rm_segd->rotateZ(segd.rz);   
+
   // Union solid 
   // use same rotation and positional vectors as glass shell!  
   G4UnionSolid *he3Tube;
   // main shaft + upstream "window"  
   he3Tube = new G4UnionSolid("tc_um"        ,tcShape,mainShaft_up,rm_mshu ,P_mshu );
   he3Tube = new G4UnionSolid("tc_uml"       ,he3Tube,lip_up      ,rm_lipu ,P_lipu );
-  he3Tube = new G4UnionSolid("tc_umlr"      ,he3Tube,roundLip_up ,rm_rlipu,P_rlipu);
-  he3Tube = new G4UnionSolid("tc_umlre"     ,he3Tube,endcap_up   ,rm_ecu  ,P_ecu  );
+  he3Tube = new G4UnionSolid("tc_umls"      ,he3Tube,seg_up      ,rm_segu,P_segu);
+  // he3Tube = new G4UnionSolid("tc_umlr"      ,he3Tube,roundLip_up ,rm_rlipu,P_rlipu);
+  // he3Tube = new G4UnionSolid("tc_umlre"     ,he3Tube,endcap_up   ,rm_ecu  ,P_ecu  );
   // downstream end window  
   he3Tube = new G4UnionSolid("tc_umlre_dm"  ,he3Tube,mainShaft_dn,rm_mshd ,P_mshd );
   he3Tube = new G4UnionSolid("tc_umlre_dml" ,he3Tube,lip_dn      ,rm_lipd ,P_lipd );
-  he3Tube = new G4UnionSolid("tc_umlre_dmlr",he3Tube,roundLip_dn ,rm_rlipd,P_rlipd);
-  he3Tube = new G4UnionSolid("he3Tube"      ,he3Tube,endcap_dn   ,rm_ecd  ,P_ecd  );
+  he3Tube = new G4UnionSolid("he3Tube"      ,he3Tube,seg_dn      ,rm_segd,P_segd  );
+  // he3Tube = new G4UnionSolid("tc_umlre_dmlr",he3Tube,roundLip_dn ,rm_rlipd,P_rlipd);
+  // he3Tube = new G4UnionSolid("he3Tube"      ,he3Tube,endcap_dn   ,rm_ecd  ,P_ecd  );
 
   // set the color of He3 
   G4VisAttributes *visHe3 = new G4VisAttributes(); 
   visHe3->SetColour( G4Colour::Yellow() );
-  // visHe3->SetForceWireframe(true);  
+  visHe3->SetForceWireframe(true);  
 
   // logical volume of He3
   fLogicHe3 = new G4LogicalVolume(he3Tube,GetMaterial("He3"),"logicHe3");  
@@ -455,7 +504,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(){
                     posHe3,            // position 
                     fLogicHe3,          // logical volume 
                     "physHe3",         // name 
-                    fLogicGlassCell,   // logical mother volume is the target chamber 
+                    logicMother,       // logical mother volume 
                     isBoolean,         // boolean operations 
                     0,                 // copy number 
                     fCheckOverlaps);    // check overlaps
@@ -480,10 +529,10 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
       exit(1);
    }  
 
-   std::string ms_str = "ew_mainShaft_" + suffix; 
-   std::string l_str  = "ew_lip_"       + suffix; 
-   std::string rl_str = "ew_rlip_"      + suffix; 
-   std::string c_str  = "ew_cap_"       + suffix; 
+   std::string ms_str = "ew_mainShaft"; 
+   std::string l_str  = "ew_lip"; 
+   std::string rl_str = "ew_rlip"; 
+   std::string c_str  = "ew_cap"; 
 
    // build the main shaft 
    partParameters_t msh;
@@ -1233,15 +1282,15 @@ void He3TargetDetectorConstruction::BuildHelmholtzCoils(int config,const std::st
 
     if(type.compare("maj")==0){
        fLogicHelmholtzSMaj[0] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell"); 
-       fLogicHelmholtzSMaj[1] = new G4LogicalVolume(coilShell_p,GetMaterial("NEMAG10"),"logicCoilShell");
+       fLogicHelmholtzSMaj[1] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");
        for(int i=0;i<2;i++) fLogicHelmholtzSMaj[i]->SetVisAttributes(visCoilShell); 
     }else if(type.compare("rfy")==0){
        fLogicHelmholtzSRFY[0] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");  
-       fLogicHelmholtzSRFY[1] = new G4LogicalVolume(coilShell_p,GetMaterial("NEMAG10"),"logicCoilShell");
+       fLogicHelmholtzSRFY[1] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");
        for(int i=0;i<2;i++) fLogicHelmholtzSRFY[i]->SetVisAttributes(visCoilShell); 
     }else if(type.compare("min")==0){
        fLogicHelmholtzSMin[0] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");   
-       fLogicHelmholtzSMin[1] = new G4LogicalVolume(coilShell_p,GetMaterial("NEMAG10"),"logicCoilShell");
+       fLogicHelmholtzSMin[1] = new G4LogicalVolume(coilShell_n,GetMaterial("NEMAG10"),"logicCoilShell");
        for(int i=0;i<2;i++) fLogicHelmholtzSMin[i]->SetVisAttributes(visCoilShell); 
     } 
 

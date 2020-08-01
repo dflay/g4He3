@@ -85,7 +85,7 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
    G4Material *GetMaterial(G4String name);
 
    void BuildGlassCell(G4LogicalVolume *logicMother);
-   void BuildPolarizedHe3();    
+   void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
    void BuildBeam(G4LogicalVolume *logicMother); 
    void BuildPickupCoils(G4LogicalVolume *logicMother);    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
