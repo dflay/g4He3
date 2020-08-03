@@ -176,7 +176,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildEndWindow("upstream"  ,logicWorld); 
   BuildEndWindow("downstream",logicWorld); 
 
-  // cylinder of polarized 3He; logic mother is the glass cell
+  // cylinder of polarized 3He
   BuildPolarizedHe3(logicWorld);
 
   // helmholtz coils
@@ -194,7 +194,7 @@ G4VPhysicalVolume* He3TargetDetectorConstruction::Construct()
   BuildPickupCoils(logicWorld); 
 
   // beam path (for reference only) 
-  BuildBeam(logicWorld);  
+  // BuildBeam(logicWorld);  
 
   // always return the physical World
   return physWorld;
@@ -244,7 +244,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   tc.r_max = tc.r_min; 
   tc.r_min = 0.*cm;
 
-  // PrintPart(tc); 
+  PrintPart(tc,"mm","deg"); 
  
   G4Tubs *tcShape = new G4Tubs("He3_tc",
                                tc.r_min    ,tc.r_max,
@@ -263,7 +263,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   G4double z0 = 0.5*(tc.length + mshu.length);  
   mshu.z      = -z0;  
  
-  // PrintPart(mshu); 
+  PrintPart(mshu,"inch","deg"); 
 
   G4Tubs *mainShaft_up = new G4Tubs(mshu.name,
 	                            mshu.r_min    ,mshu.r_max,
@@ -280,11 +280,11 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   partParameters_t lipu;
   GetPart("ew_lip",lipu);
   lipu.name  = "ew_lip_up"; 
-  lipu.r_max = lipu.r_min; 
+  lipu.r_max = 10.5*mm; // lipu.r_min; 
   lipu.r_min = 0.*cm;  
   lipu.z     = -z0 - lipu.z;  
   
-  // PrintPart(lipu); 
+  PrintPart(lipu,"inch","deg"); 
 
   G4Tubs *lip_up = new G4Tubs(lipu.name,
 	                      lipu.r_min    ,lipu.r_max,
@@ -306,7 +306,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   rlipu.z     = -z0 - rlipu.z; // subtract an additional 0.5*mm?  
   rlipu.ry    = 180.*deg;  
   
-  // PrintPart(rlipu); 
+  PrintPart(rlipu,"inch","deg"); 
 
   G4Sphere *roundLip_up = new G4Sphere(rlipu.name,
 	                               rlipu.r_min     ,rlipu.r_max,
@@ -328,7 +328,7 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   ecu.z     = -z0 - ecu.z;  
   ecu.ry    = 180.*deg;  
   
-  // PrintPart(ecu); 
+  PrintPart(ecu,"inch","deg"); 
 
   G4Sphere *endcap_up = new G4Sphere(ecu.name,
 	                             ecu.r_min     ,ecu.r_max,
@@ -341,17 +341,20 @@ void He3TargetDetectorConstruction::BuildPolarizedHe3(G4LogicalVolume *logicMoth
   rm_ecu->rotateY(ecu.ry);   
   rm_ecu->rotateZ(ecu.rz);  
 
-  // single hemisphere instead of the two sphere segments 
+  // single hemisphere instead of the two sphere segments
+  G4double delta = 0.5*mm;  
   partParameters_t segu; 
   segu.name       = "ew_seg_up";
-  segu.r_max      = 0.4855*25.4*mm; 
+  segu.r_max      = 0.4855*25.4*mm - delta; 
   segu.r_min      = 0.*mm;
   segu.startTheta = 0.*deg; 
   segu.dTheta     = 90.*deg; 
   segu.startPhi   = 0.*deg; 
   segu.dPhi       = 360.*deg;
   segu.z          = rlipu.z; // -1.*z0 - rlipu.z;
-  segu.ry         = 180.*deg; 
+  segu.ry         = 180.*deg;
+
+  PrintPart(segu,"inch","deg");  
 
   G4Sphere *seg_up = new G4Sphere(segu.name,
 	                          segu.r_min     ,segu.r_max,
@@ -538,7 +541,7 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    partParameters_t msh;
    GetPart(ms_str.c_str(),msh);
 
-   // PrintPart(msh);  
+   // PrintPart(msh,"inch","deg");  
 
    G4Tubs *mainShaft = new G4Tubs(msh.name,
 	                          msh.r_min    ,msh.r_max,
@@ -555,7 +558,7 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    partParameters_t lip;
    GetPart(l_str.c_str(),lip); 
    
-   // PrintPart(lip);  
+   // PrintPart(lip,"inch","deg");  
 
    G4Tubs *lipTube = new G4Tubs(lip.name,
 	                        lip.r_min    ,lip.r_max,
@@ -572,7 +575,7 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    partParameters_t rlip;
    GetPart(rl_str.c_str(),rlip); 
    
-   // PrintPart(rlip);  
+   // PrintPart(rlip,"inch","deg");  
 
    G4Sphere *roundLip = new G4Sphere(rlip.name,
 	                             rlip.r_min     ,rlip.r_max,
@@ -589,7 +592,7 @@ void He3TargetDetectorConstruction::BuildEndWindow(const std::string type,G4Logi
    partParameters_t ec;
    GetPart(c_str.c_str(),ec); 
    
-   // PrintPart(ec);  
+   // PrintPart(ec,"inch","deg");  
 
    G4Sphere *endcap = new G4Sphere(ec.name,
 	                           ec.r_min     ,ec.r_max,
@@ -860,9 +863,10 @@ void He3TargetDetectorConstruction::BuildLadderPlate(G4LogicalVolume *logicMothe
    // ladder plate  
    // - This comes close to the beam path
    // - Drawing number: A09016-03-04-0601
-   G4double x0 = -0.438*2.54*cm; // beam right from JT model  
-   G4double y0 = -5.33*cm;       // low according to JT model
-   G4double z0 = 1.5*2.54*cm;    // downstream according to JT model   
+   G4double inch = 2.54*cm; 
+   G4double x0 = -0.438*inch; // beam right from JT model  
+   G4double y0 = -5.33*cm;    // low according to JT model
+   G4double z0 = 1.0*inch; // estimate; 1.5 inch causes overlaps.  1.5*inch;    // downstream according to JT model   
 
    //---- vertical posts along y axis 
    // upstream 
@@ -2044,28 +2048,28 @@ int He3TargetDetectorConstruction::PrintPart(const partParameters_t data,std::st
    sprintf(msg,"data.name = \"%s\"; data.shape = \"%s\";",data.name.c_str(),data.shape.c_str()); 
    std::cout << msg << std::endl;
  
-   sprintf(msg,"data.r_tor = %.1lf*%s; data.r_min = %.1lf*%s; data.r_max = %.1lf*%s; data.length = %.1lf*%s;"
+   sprintf(msg,"data.r_tor = %.3lf*%s; data.r_min = %.3lf*%s; data.r_max = %.3lf*%s; data.length = %.3lf*%s;"
               ,data.r_tor/sf_len ,LEN.c_str(),data.r_min/sf_len,LEN.c_str(),data.r_max/sf_len,LEN.c_str()
               ,data.length/sf_len,LEN.c_str());       
    std::cout << msg << std::endl;
 
-   sprintf(msg,"data.x_len = %.1lf*%s; data.y_len = %.1lf*%s; data.z_len = %.1lf*%s;"
+   sprintf(msg,"data.x_len = %.3lf*%s; data.y_len = %.3lf*%s; data.z_len = %.3lf*%s;"
               ,data.x_len/sf_len ,LEN.c_str(),data.y_len/sf_len,LEN.c_str(),data.z_len/sf_len,LEN.c_str());       
    std::cout << msg << std::endl;
 
-   sprintf(msg,"data.startTheta = %.1lf*%s; data.dTheta = %.1lf*%s;"
+   sprintf(msg,"data.startTheta = %.3lf*%s; data.dTheta = %.3lf*%s;"
               ,data.startTheta/sf_ang,ANG.c_str(),data.dTheta/sf_ang,ANG.c_str());      
    std::cout << msg << std::endl;
 
-   sprintf(msg,"data.startPhi = %.1lf*%s; data.dPhi = %.1lf*%s;"
+   sprintf(msg,"data.startPhi = %.3lf*%s; data.dPhi = %.3lf*%s;"
               ,data.startPhi/sf_ang,ANG.c_str(),data.dPhi/sf_ang,ANG.c_str());      
    std::cout << msg << std::endl;
 
-   sprintf(msg,"data.x = %.1lf*%s; data.y = %.1lf*%s; data.z = %.1lf*%s;"
+   sprintf(msg,"data.x = %.3lf*%s; data.y = %.3lf*%s; data.z = %.3lf*%s;"
               ,data.x/sf_len ,LEN.c_str(),data.y/sf_len,LEN.c_str(),data.z/sf_len,LEN.c_str());       
    std::cout << msg << std::endl;
 
-   sprintf(msg,"data.rx = %.1lf*%s; data.ry = %.1lf*%s; data.rz = %.1lf*%s;"
+   sprintf(msg,"data.rx = %.3lf*%s; data.ry = %.3lf*%s; data.rz = %.3lf*%s;"
               ,data.rx/sf_ang,ANG.c_str(),data.ry/sf_ang,ANG.c_str(),data.rz/sf_ang,ANG.c_str());       
    std::cout << msg << std::endl;
 
