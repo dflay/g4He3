@@ -86,12 +86,14 @@ class He3TargetDetectorConstruction : public G4VUserDetectorConstruction
 
    void BuildGlassCell(G4LogicalVolume *logicMother);
    void BuildPolarizedHe3(G4LogicalVolume *logicMother);    
+   void BuildPolarizedHe3_forGE180(G4LogicalVolume *logicMother);    
    void BuildBeam(G4LogicalVolume *logicMother); 
    void BuildPickupCoils(G4LogicalVolume *logicMother);    
    void BuildLadderPlate(G4LogicalVolume *logicMother); 
    void BuildShield(int config,G4LogicalVolume *logicMother); 
    void BuildHelmholtzCoils(int config,const std::string type,G4LogicalVolume *logicMother); 
    void BuildEndWindow(const std::string type,G4LogicalVolume *logicMother);
+   void BuildEndWindows_GE180(G4LogicalVolume *logicMother);
 
    int ConstructMaterials(); 
    int ReadData(const char *inpath);
